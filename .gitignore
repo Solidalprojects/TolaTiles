@@ -1,0 +1,27 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*.sqlite3
+*.log
+
+# Django
+*.db
+*.pot
+*.pyc
+*.pyo
+*.pyd
+*.migrations/
+db.sqlite3
+
+# Vite / Node.js
+node_modules/
+dist/
+.env
+.vite/
+
+# macOS
+.DS_Store
+
+# VSCode
+.vscode/
