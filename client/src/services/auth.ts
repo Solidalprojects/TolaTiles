@@ -1,6 +1,6 @@
 // client/src/services/auth.ts
 import axios from 'axios';
-import { LoginCredentials, AuthResponse, User } from '../types/types';
+import { LoginCredentials, AuthResponse, User, RegisterCredentials } from '../types/types';
 
 const API_URL = 'http://localhost:8000/api/';
 
@@ -11,17 +11,12 @@ const API_URL = 'http://localhost:8000/api/';
  */
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
-    console.log('Attempting login with:', credentials.username);
-    console.log('API URL:', `${API_URL}auth/login/`);
+    // Make sure we're sending the proper format with trailing slash
+    const loginUrl = `${API_URL}auth/login/`;
+    console.log('Login attempt with:', credentials.username);
+    console.log('Login URL:', loginUrl);
     
-    // Log the request data
-    console.log('Request payload:', {
-      username: credentials.username,
-      password: '********' // Don't log actual password
-    });
-    
-    // Make sure we're sending the proper format
-    const response = await axios.post(`${API_URL}auth/login/`, {
+    const response = await axios.post(loginUrl, {
       username: credentials.username,
       password: credentials.password
     }, {
@@ -32,8 +27,6 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     });
     
     console.log('Login response status:', response.status);
-    console.log('Login response headers:', response.headers);
-    console.log('Login response data structure:', Object.keys(response.data));
     
     // Check if we have access token in the response
     if (response.data && response.data.access) {
@@ -50,11 +43,39 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
     if (axios.isAxiosError(error) && error.response) {
       console.error('Server response error status:', error.response.status);
       console.error('Server response error data:', error.response.data);
-      console.error('Server response error headers:', error.response.headers);
       throw error;
     } else {
       console.error('Non-Axios error or network error:', error.message);
       throw new Error('Network error occurred during login');
+    }
+  }
+};
+
+/**
+ * Register a new user and return authentication data
+ * @param credentials User registration details
+ * @returns Authentication response with tokens and user data
+ */
+export const register = async (credentials: RegisterCredentials): Promise<AuthResponse> => {
+  try {
+    const response = await axios.post(`${API_URL}auth/register/`, credentials, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
+    });
+    
+    if (response.data && response.data.access) {
+      localStorage.setItem('user', JSON.stringify(response.data));
+      return response.data;
+    } else {
+      throw new Error('Registration failed: Invalid response format');
+    }
+  } catch (error: any) {
+    if (axios.isAxiosError(error) && error.response) {
+      throw error;
+    } else {
+      throw new Error('Network error occurred during registration');
     }
   }
 };
@@ -101,6 +122,24 @@ export const isTokenExpired = (): boolean => {
 };
 
 /**
+ * Check if user is authenticated
+ * @returns boolean indicating if user is authenticated with valid token
+ */
+export const isAuthenticated = (): boolean => {
+  const user = getCurrentUser();
+  return !!user && !isTokenExpired();
+};
+
+/**
+ * Check if current user is an admin
+ * @returns boolean indicating if user is an admin
+ */
+export const isAdmin = (): boolean => {
+  const user = getCurrentUser();
+  return !!user && !!user.user && user.user.is_staff === true;
+};
+
+/**
  * Generate authorization header with JWT token
  * @returns Authorization header object
  */
@@ -110,6 +149,31 @@ export const authHeader = (): Record<string, string> => {
     return { Authorization: `Bearer ${user.access}` };
   }
   return {};
+};
+
+/**
+ * Change password for the authenticated user
+ * @param oldPassword Current password
+ * @param newPassword New password to set
+ * @returns Response data with new tokens
+ */
+export const changePassword = async (oldPassword: string, newPassword: string): Promise<any> => {
+  try {
+    const response = await axios.post(
+      `${API_URL}auth/change-password/`,
+      { old_password: oldPassword, new_password: newPassword },
+      { headers: authHeader() }
+    );
+    
+    if (response.data && response.data.access) {
+      localStorage.setItem('user', JSON.stringify(response.data));
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Password change error:', error);
+    throw error;
+  }
 };
 
 /**

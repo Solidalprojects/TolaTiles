@@ -2,7 +2,7 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Home from './pages/home'
 import Dashboard from './components/Dashboard'
-import Login from './components/Login'
+import Login from './admin/Login'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import './App.css'
 

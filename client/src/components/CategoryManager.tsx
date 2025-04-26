@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { authHeader } from '../services/auth';
 import { Category } from '../types/types';
+import { API_ENDPOINTS } from '../api/api';
 
 const CategoryManager = () => {
   const [categories, setCategories] = useState<Category[]>([]);
