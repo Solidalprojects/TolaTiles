@@ -1,8 +1,8 @@
 // client/src/components/ProjectManager.tsx
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { authHeader } from '../services/auth';
 import { Project, ProjectImage } from '../types/types';
+import { projectService } from '../services/api';
+import { AlertCircle, Loader, Plus, X, Edit, Trash2 } from 'lucide-react';
 
 const ProjectManager = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -19,8 +19,7 @@ const ProjectManager = () => {
   const [projectImages, setProjectImages] = useState<File[]>([]);
   const [imageCaptions, setImageCaptions] = useState<string[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
-
-  const API_URL = 'http://localhost:8000/api/';
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchProjects();
@@ -28,10 +27,13 @@ const ProjectManager = () => {
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get(`${API_URL}projects/`, { headers: authHeader() });
-      setProjects(response.data);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
+      setLoading(true);
+      setError(null);
+      const data = await projectService.getProjects();
+      setProjects(data);
+    } catch (err) {
+      console.error('Error fetching projects:', err);
+      setError('Failed to fetch projects. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -69,59 +71,50 @@ const ProjectManager = () => {
     
     try {
       setLoading(true);
+      setError(null);
+      
+      const formData = new FormData();
+      // Append project data
+      Object.entries(newProject).forEach(([key, value]) => {
+        formData.append(key, value.toString());
+      });
       
       let projectId: number;
       
       if (editingProject) {
         // Update existing project
-        const response = await axios.patch(
-          `${API_URL}projects/${editingProject.id}/`, 
-          newProject, 
-          { headers: authHeader() }
-        );
-        projectId = response.data.id;
+        const updatedProject = await projectService.updateProject(editingProject.id, formData);
+        projectId = updatedProject.id;
       } else {
         // Create new project
-        const response = await axios.post(
-          `${API_URL}projects/`, 
-          newProject, 
-          { headers: authHeader() }
-        );
-        projectId = response.data.id;
+        const createdProject = await projectService.createProject(formData);
+        projectId = createdProject.id;
       }
       
       // Upload images if any
       if (projectImages.length > 0) {
         for (let i = 0; i < projectImages.length; i++) {
-          const formData = new FormData();
-          formData.append('project', projectId.toString());
-          formData.append('image', projectImages[i]);
-          formData.append('caption', imageCaptions[i] || '');
+          const imageFormData = new FormData();
+          imageFormData.append('project', projectId.toString());
+          imageFormData.append('image', projectImages[i]);
+          imageFormData.append('caption', imageCaptions[i] || '');
           
-          await axios.post(`${API_URL}project-images/`, formData, {
+          // Use axios to upload image
+          await fetch(`http://localhost:8000/api/project-images/`, {
+            method: 'POST',
             headers: {
-              ...authHeader(),
-              'Content-Type': 'multipart/form-data'
-            }
+              'Authorization': `Token ${localStorage.getItem('adminToken')}`
+            },
+            body: imageFormData
           });
         }
       }
       
-      fetchProjects();
-      setShowAddForm(false);
-      setNewProject({
-        title: '',
-        description: '',
-        client: '',
-        location: '',
-        completed_date: '',
-        featured: false,
-      });
-      setProjectImages([]);
-      setImageCaptions([]);
-      setEditingProject(null);
-    } catch (error) {
-      console.error('Error saving project:', error);
+      await fetchProjects();
+      resetForm();
+    } catch (err) {
+      console.error('Error saving project:', err);
+      setError('Failed to save project. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -131,10 +124,12 @@ const ProjectManager = () => {
     if (window.confirm('Are you sure you want to delete this project?')) {
       try {
         setLoading(true);
-        await axios.delete(`${API_URL}projects/${id}/`, { headers: authHeader() });
-        fetchProjects();
-      } catch (error) {
-        console.error('Error deleting project:', error);
+        setError(null);
+        await projectService.deleteProject(id);
+        await fetchProjects();
+      } catch (err) {
+        console.error('Error deleting project:', err);
+        setError('Failed to delete project. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -154,106 +149,141 @@ const ProjectManager = () => {
     setShowAddForm(true);
   };
 
+  const resetForm = () => {
+    setShowAddForm(false);
+    setEditingProject(null);
+    setNewProject({
+      title: '',
+      description: '',
+      client: '',
+      location: '',
+      completed_date: '',
+      featured: false,
+    });
+    setProjectImages([]);
+    setImageCaptions([]);
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
   };
 
   return (
-    <div className="project-manager">
-      <div className="manager-header">
-        <h2>Manage Projects</h2>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Manage Projects</h2>
         <button 
           onClick={() => {
-            setShowAddForm(!showAddForm);
-            setEditingProject(null);
-            setNewProject({
-              title: '',
-              description: '',
-              client: '',
-              location: '',
-              completed_date: '',
-              featured: false,
-            });
-            setProjectImages([]);
-            setImageCaptions([]);
+            if (showAddForm) {
+              resetForm();
+            } else {
+              setShowAddForm(true);
+            }
           }}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
-          {showAddForm ? 'Cancel' : 'Add New Project'}
+          {showAddForm ? (
+            <>
+              <X size={18} className="mr-2" />
+              Cancel
+            </>
+          ) : (
+            <>
+              <Plus size={18} className="mr-2" />
+              Add New Project
+            </>
+          )}
         </button>
       </div>
 
+      {error && (
+        <div className="flex items-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <AlertCircle size={18} className="mr-2" />
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
+
       {showAddForm && (
-        <form onSubmit={handleSubmit} className="project-form">
-          <h3>{editingProject ? 'Edit Project' : 'Add New Project'}</h3>
-          <div className="form-group">
-            <label htmlFor="title">Title</label>
+        <form onSubmit={handleSubmit} className="bg-gray-50 p-6 rounded-lg mb-6">
+          <h3 className="text-xl font-semibold mb-4 text-gray-800">{editingProject ? 'Edit Project' : 'Add New Project'}</h3>
+          <div className="mb-4">
+            <label htmlFor="title" className="block text-gray-700 mb-2">Title</label>
             <input
               type="text"
               id="title"
               name="title"
               value={newProject.title}
               onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="description">Description</label>
+          <div className="mb-4">
+            <label htmlFor="description" className="block text-gray-700 mb-2">Description</label>
             <textarea
               id="description"
               name="description"
               value={newProject.description}
               onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="client">Client</label>
+          <div className="mb-4">
+            <label htmlFor="client" className="block text-gray-700 mb-2">Client</label>
             <input
               type="text"
               id="client"
               name="client"
               value={newProject.client}
               onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="location">Location</label>
+          <div className="mb-4">
+            <label htmlFor="location" className="block text-gray-700 mb-2">Location</label>
             <input
               type="text"
               id="location"
               name="location"
               value={newProject.location}
               onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="completed_date">Completion Date</label>
+          <div className="mb-4">
+            <label htmlFor="completed_date" className="block text-gray-700 mb-2">Completion Date</label>
             <input
               type="date"
               id="completed_date"
               name="completed_date"
               value={newProject.completed_date}
               onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
-          <div className="form-group checkbox">
+          <div className="flex items-center mb-4">
             <input
               type="checkbox"
               id="featured"
               name="featured"
               checked={newProject.featured}
               onChange={handleInputChange}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <label htmlFor="featured">Featured</label>
+            <label htmlFor="featured" className="ml-2 block text-gray-700">
+              Featured Project
+            </label>
           </div>
           
           {!editingProject && (
-            <div className="form-group">
-              <label htmlFor="images">Project Images</label>
+            <div className="mb-4">
+              <label htmlFor="images" className="block text-gray-700 mb-2">Project Images</label>
               <input
                 type="file"
                 id="images"
@@ -261,19 +291,21 @@ const ProjectManager = () => {
                 onChange={handleFileChange}
                 accept="image/*"
                 multiple
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               
               {projectImages.length > 0 && (
-                <div className="image-captions">
-                  <h4>Image Captions</h4>
+                <div className="mt-4 p-4 bg-gray-100 rounded-md">
+                  <h4 className="font-medium mb-2">Image Captions</h4>
                   {projectImages.map((file, index) => (
-                    <div key={index} className="caption-input">
-                      <p>{file.name}</p>
+                    <div key={index} className="flex items-center mb-2">
+                      <span className="mr-2 text-sm truncate" style={{ maxWidth: '200px' }}>{file.name}</span>
                       <input
                         type="text"
-                        placeholder="Image caption"
-                        value={imageCaptions[index]}
+                        placeholder="Enter caption"
+                        value={imageCaptions[index] || ''}
                         onChange={(e) => handleCaptionChange(index, e.target.value)}
+                        className="flex-1 px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   ))}
@@ -282,56 +314,85 @@ const ProjectManager = () => {
             </div>
           )}
           
-          <button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : 'Save Project'}
-          </button>
+          <div className="flex justify-end">
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-300"
+            >
+              {loading ? (
+                <>
+                  <Loader size={18} className="animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                'Save Project'
+              )}
+            </button>
+          </div>
         </form>
       )}
 
       {loading && !showAddForm ? (
-        <div className="loading">Loading projects...</div>
+        <div className="flex justify-center items-center p-12">
+          <Loader size={24} className="animate-spin text-blue-600 mr-2" />
+          <span className="text-gray-600">Loading projects...</span>
+        </div>
       ) : (
-        <div className="projects-list">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {projects.length === 0 ? (
-            <p>No projects found. Add some!</p>
+            <div className="col-span-full text-center py-12 bg-gray-50 rounded-lg">
+              <p className="text-gray-500">No projects found. Add some!</p>
+            </div>
           ) : (
-            <div className="projects-grid">
-              {projects.map((project) => (
-                <div key={project.id} className="project-card">
-                  <h3>{project.title}</h3>
-                  <p><strong>Client:</strong> {project.client}</p>
-                  <p><strong>Location:</strong> {project.location}</p>
-                  <p><strong>Completed:</strong> {formatDate(project.completed_date)}</p>
-                  <p><strong>Status:</strong> {project.featured ? 'Featured' : 'Not Featured'}</p>
-                  <div className="project-description">
-                    <p>{project.description}</p>
+            projects.map((project) => (
+              <div key={project.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                {project.primary_image && (
+                  <div className="h-48 overflow-hidden">
+                    <img 
+                      src={project.primary_image} 
+                      alt={project.title} 
+                      className="w-full h-full object-cover"
+                    />
                   </div>
-                  
-                  {project.images && project.images.length > 0 && (
-                    <div className="project-images">
-                      <h4>Project Images</h4>
-                      <div className="image-thumbnails">
-                        {project.images.map((image, index) => (
-                          <div key={index} className="image-thumbnail">
-                            <img src={`http://localhost:8000${image.image}`} alt={image.caption || `Project image ${index + 1}`} />
-                            {image.caption && <p>{image.caption}</p>}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="project-actions">
-                    <button onClick={() => handleEdit(project)} className="edit-button">
+                )}
+                <div className="p-4">
+                  <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
+                  <div className="mb-3 text-sm">
+                    <p><span className="font-medium text-gray-700">Client:</span> {project.client}</p>
+                    <p><span className="font-medium text-gray-700">Location:</span> {project.location}</p>
+                    <p><span className="font-medium text-gray-700">Completed:</span> {formatDate(project.completed_date)}</p>
+                    <p>
+                      <span className="font-medium text-gray-700">Status:</span>
+                      {project.featured ? (
+                        <span className="ml-1 bg-yellow-100 text-yellow-800 text-xs font-medium px-2 py-0.5 rounded">Featured</span>
+                      ) : (
+                        <span className="ml-1 bg-gray-100 text-gray-800 text-xs font-medium px-2 py-0.5 rounded">Standard</span>
+                      )}
+                    </p>
+                  </div>
+                  <div className="mb-3">
+                    <p className="text-gray-600 text-sm line-clamp-3">{project.description}</p>
+                  </div>
+                  <div className="flex justify-end space-x-2">
+                    <button 
+                      onClick={() => handleEdit(project)} 
+                      className="flex items-center px-3 py-1 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors"
+                    >
+                      <Edit size={16} className="mr-1" />
                       Edit
                     </button>
-                    <button onClick={() => handleDelete(project.id)} className="delete-button">
+                    <button 
+                      onClick={() => handleDelete(project.id)} 
+                      className="flex items-center px-3 py-1 bg-red-100 text-red-700 rounded-md hover:bg-red-200 transition-colors"
+                    >
+                      <Trash2 size={16} className="mr-1" />
                       Delete
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))
           )}
         </div>
       )}
