@@ -31,17 +31,31 @@ class IsAdminOrReadOnly(permissions.BasePermission):
             return True
         return request.user and request.user.is_staff
 
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.permissions import AllowAny
+from django.contrib.auth import authenticate
+from rest_framework.authtoken.models import Token
+import logging
+
+# Set up logger
+logger = logging.getLogger(__name__)
+
 @api_view(['POST'])
-def login_view(request):
+@permission_classes([AllowAny])
+def admin_login(request):
     """
-    Handle user authentication and return JWT tokens on success.
+    Handle user authentication and return token on success.
+    This is specifically for admin users to access the dashboard.
     """
     username = request.data.get('username')
     password = request.data.get('password')
     
-    logger.info(f"Login attempt for user: {username}")
+    logger.info(f"Admin login attempt for user: {username}")
     
     if not username or not password:
+        logger.warning("Login attempt with missing username or password")
         return Response(
             {'error': 'Username and password are required'}, 
             status=status.HTTP_400_BAD_REQUEST
@@ -50,18 +64,34 @@ def login_view(request):
     user = authenticate(username=username, password=password)
     
     if user is not None:
-        refresh = RefreshToken.for_user(user)
+        # Check if user is staff/admin
+        if not user.is_staff:
+            logger.warning(f"User {username} is not an admin user but attempted admin login")
+            return Response(
+                {'error': 'Access denied. Admin privileges required.'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Create or get token
+        token, created = Token.objects.get_or_create(user=user)
         
         response_data = {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'user': UserSerializer(user).data
+            'token': token.key,
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'is_staff': user.is_staff,
+                'first_name': user.first_name,
+                'last_name': user.last_name
+            }
         }
         
-        logger.info(f"User {username} authenticated successfully")
+        logger.info(f"Admin user {username} authenticated successfully")
         return Response(response_data)
     else:
         # Check if user exists (helps with debugging)
+        from django.contrib.auth.models import User
         user_exists = User.objects.filter(username=username).exists()
         
         if user_exists:
@@ -75,7 +105,6 @@ def login_view(request):
             {'error': error_message}, 
             status=status.HTTP_401_UNAUTHORIZED
         )
-
 @api_view(['POST'])
 def register_view(request):
     """

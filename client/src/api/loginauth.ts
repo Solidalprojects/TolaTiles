@@ -9,11 +9,6 @@ export interface LoginFormData {
   password: string;
 }
 
-export interface AuthState {
-  isAuthenticated: boolean;
-  token: string | null;
-}
-
 export interface AuthResponse {
   token: string;
   user: User;
@@ -23,17 +18,23 @@ export async function login(credentials: LoginFormData): Promise<AuthResponse> {
   try {
     const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
     
-    // Store token directly using setStoredAuth
-    if (response.token) {
+    // Check if response contains token and user data
+    if (response.token && response.user) {
+      // Store token in localStorage
       setStoredAuth(response.token);
-    }
-    
-    // Store user data for later use
-    if (response.user) {
+      
+      // Store user data
       localStorage.setItem('userData', JSON.stringify(response.user));
+      
+      // Set a session flag for additional security
+      sessionStorage.setItem('sessionAuth', 'true');
+      
+      console.log('Authentication successful');
+      return response;
+    } else {
+      console.error('Authentication failed: Invalid response format', response);
+      throw new Error('Authentication failed: Invalid response format');
     }
-    
-    return response;
   } catch (error) {
     console.error('Login error:', error);
     throw error;

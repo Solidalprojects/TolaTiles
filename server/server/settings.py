@@ -40,9 +40,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'api',
     'rest_framework',
+    'rest_framework.authtoken',  # Make sure this is included
     'corsheaders',
-    'rest_framework_simplejwt',
-    
+    # 'rest_framework_simplejwt',  # You can comment this out or remove it
 ]
 
 MIDDLEWARE = [
@@ -58,7 +58,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'server.urls'
 
-CORS_ALLOW_ALL_ORIGINS = True  
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Assuming your React app runs on port 3000
+    "http://localhost:5173",  # For Vite
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+]
 
 TEMPLATES = [
     {
@@ -80,21 +86,15 @@ WSGI_APPLICATION = 'server.wsgi.application'
 
 # REST Framework settings
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
 }
 
-# JWT settings
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-}
+
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases

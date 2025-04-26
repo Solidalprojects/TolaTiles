@@ -1,7 +1,6 @@
 # server/api/urls.py
 from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
-from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from . import views
 from .views_auth import admin_login
 
@@ -19,8 +18,9 @@ urlpatterns = [
     # Authentication endpoints
     path('auth/login/', admin_login, name='login'),
     path('auth/register/', views.register_view, name='register'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
+    # Remove JWT endpoints
+    # path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # path('auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('auth/user/', views.get_user_info, name='user_info'),
     path('auth/change-password/', views.change_password, name='change_password'),
     

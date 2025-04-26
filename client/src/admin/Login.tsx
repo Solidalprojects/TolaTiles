@@ -1,11 +1,11 @@
+// client/src/admin/Login.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../api/loginauth';
+import { login } from '../services/auth';
 import { API_ENDPOINTS } from '../api/api';
-import { setStoredAuth } from '../api/storedAuth';
 import { Eye, EyeOff, Loader, Lock, User, AlertCircle } from 'lucide-react';
 
-const Login = () => {
+const Login: React.FC = () => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
@@ -15,7 +15,7 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  // When login component mounts, clear any existing sessionAuth flag
+  // When login component mounts, clear any existing session flag
   useEffect(() => {
     sessionStorage.removeItem('sessionAuth');
   }, []);
@@ -30,30 +30,24 @@ const Login = () => {
       // Use the login function from auth service
       const data = await login(formData);
       
-      // Explicitly store token in localStorage using setStoredAuth
-      if (data.token) {
-        setStoredAuth(data.token);
-        
-        // Also set session authentication flag
-        sessionStorage.setItem('sessionAuth', 'true');
-        
-        // Check if user is admin before allowing access to dashboard
-        if (data.user && data.user.is_staff) {
-          console.log('Login successful - redirecting to dashboard');
-          navigate('/auth/dashboard');
-        } else {
-          setError('Access denied. Admin privileges required.');
-          // Clear the session auth flag if access is denied
-          sessionStorage.removeItem('sessionAuth');
-        }
+      console.log('Login response received:', { hasToken: !!data.token, hasUser: !!data.user });
+      
+      // Check if user is admin before allowing access to dashboard
+      if (data.user && data.user.is_staff) {
+        console.log('Login successful - redirecting to dashboard');
+        navigate('/auth/dashboard');
       } else {
-        setError('Authentication failed. No token received.');
+        setError('Access denied. Admin privileges required.');
+        // Clear the session auth flag if access is denied
+        sessionStorage.removeItem('sessionAuth');
       }
     } catch (error: any) {
       console.error('Login error:', error);
       
       // Handle different error scenarios
-      if (error.response) {
+      if (error.message && error.message.includes('Authentication failed')) {
+        setError('Invalid username or password');
+      } else if (error.response) {
         // Server responded with an error
         if (error.response.status === 401) {
           setError('Invalid username or password');
@@ -100,13 +94,14 @@ const Login = () => {
         
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="username">Username</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <User size={18} className="text-gray-400" />
               </div>
               <input
                 type="text"
+                id="username"
                 value={formData.username}
                 onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                 className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -118,13 +113,14 @@ const Login = () => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">Password</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Lock size={18} className="text-gray-400" />
               </div>
               <input
                 type={showPassword ? "text" : "password"}
+                id="password"
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"

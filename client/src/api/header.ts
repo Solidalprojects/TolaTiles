@@ -2,7 +2,7 @@
 
 /**
  * Base API Client that ensures cookies are sent with requests
- * This is important for session tracking
+ * and properly handles authentication tokens
  */
 export const apiClient = {
   get: async (url: string, token?: string) => {
@@ -23,6 +23,12 @@ export const apiClient = {
       });
       
       if (!response.ok) {
+        // Check if unauthorized
+        if (response.status === 401) {
+          console.error('Unauthorized request:', url);
+          // You might want to trigger a logout or token refresh here
+        }
+        
         // Create a more detailed error message
         const errorText = await response.text();
         throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
@@ -46,6 +52,10 @@ export const apiClient = {
         headers['Authorization'] = `Token ${token}`;
       }
       
+      console.log('Making POST request to:', url);
+      console.log('With headers:', headers);
+      console.log('With data:', data);
+      
       const response = await fetch(url, {
         method: 'POST',
         credentials: 'include', // Important: this ensures cookies are sent
@@ -53,16 +63,24 @@ export const apiClient = {
         body: JSON.stringify(data),
       });
       
+      // Log response status for debugging
+      console.log(`Response status: ${response.status} ${response.statusText}`);
+      
       if (!response.ok) {
         // Try to get error details from response
+        let errorMessage = '';
         try {
           const errorData = await response.json();
-          throw new Error(JSON.stringify(errorData));
+          errorMessage = JSON.stringify(errorData);
+          console.error('Error response data:', errorData);
         } catch (e) {
           // If response can't be parsed as JSON, use status text
           const errorText = await response.text();
-          throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorText}`);
+          errorMessage = `${response.status} ${response.statusText} - ${errorText}`;
+          console.error('Error response text:', errorText);
         }
+        
+        throw new Error(`API request failed: ${errorMessage}`);
       }
       
       return response.json();

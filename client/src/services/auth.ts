@@ -1,44 +1,93 @@
 // client/src/services/auth.ts
 import { apiClient } from '../api/header';
 import { API_ENDPOINTS } from '../api/api';
-import { LoginFormData, AuthState } from '../api/loginauth';
-import { getStoredAuth, setStoredAuth, clearStoredAuth } from '../api/storedAuth';
+import { LoginFormData } from '../types/auth';
 
-// Clear any potentially invalid auth data on load
-const checkAndClearInvalidAuth = () => {
+// Authentication storage keys
+const TOKEN_KEY = 'adminToken';
+const USER_DATA_KEY = 'userData';
+const SESSION_AUTH_KEY = 'sessionAuth';
+
+/**
+ * Get authentication token from storage
+ */
+export const getStoredAuth = (): { token: string | null } => {
   try {
-    const { token } = getStoredAuth();
-    if (token && (typeof token !== 'string' || token.trim() === '')) {
-      console.warn('Invalid token found in storage, clearing auth data');
-      clearStoredAuth();
-    }
+    const token = localStorage.getItem(TOKEN_KEY);
+    return { token };
   } catch (error) {
-    console.error('Error checking stored auth:', error);
-    clearStoredAuth();
+    console.error('Error getting stored auth:', error);
+    return { token: null };
   }
 };
 
-// Run the check when this module is imported
-checkAndClearInvalidAuth();
+/**
+ * Store authentication token
+ */
+export const setStoredAuth = (token: string) => {
+  try {
+    // Store in localStorage for persistence
+    localStorage.setItem(TOKEN_KEY, token);
+    
+    // Also set the session flag
+    sessionStorage.setItem(SESSION_AUTH_KEY, 'true');
+    
+    console.log('Auth token stored successfully');
+  } catch (error) {
+    console.error('Error storing auth token:', error);
+  }
+};
 
-// Login function that calls the API and manages token storage
+/**
+ * Clear authentication data
+ */
+export const clearStoredAuth = () => {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(SESSION_AUTH_KEY);
+    console.log('Auth token cleared');
+  } catch (error) {
+    console.error('Error clearing auth token:', error);
+  }
+};
+
+/**
+ * Clear all authentication related data
+ */
+export const clearAllAuthData = () => {
+  try {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_DATA_KEY);
+    sessionStorage.removeItem(SESSION_AUTH_KEY);
+    
+    console.log('All auth data cleared');
+  } catch (error) {
+    console.error('Error clearing all auth data:', error);
+  }
+};
+
+/**
+ * Login user and store authentication data
+ */
 export const login = async (credentials: LoginFormData) => {
   try {
+    console.log('Attempting login with:', { username: credentials.username });
+    
+    // Call the login API endpoint
     const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
     
-    if (response.token && response.user) {
-      console.log('Login successful, token received:', !!response.token);
-      
-      // Store token in localStorage
+    if (response && response.token) {
+      // Store the token
       setStoredAuth(response.token);
       
-      // Store user data
-      localStorage.setItem('userData', JSON.stringify(response.user));
+      // Store user data if available
+      if (response.user) {
+        localStorage.setItem(USER_DATA_KEY, JSON.stringify(response.user));
+      }
       
       return response;
     } else {
-      console.error('Authentication failed: Invalid response format', response);
-      throw new Error('Authentication failed: Invalid response format');
+      throw new Error('Authentication failed: No token received');
     }
   } catch (error) {
     console.error('Login error:', error);
@@ -46,36 +95,27 @@ export const login = async (credentials: LoginFormData) => {
   }
 };
 
-// Logout function to clear stored credentials
+/**
+ * Logout user and clear auth data
+ */
 export const logout = () => {
-  console.log('Logging out, clearing auth data');
   clearStoredAuth();
-  localStorage.removeItem('userData');
-};
-
-export const clearAllAuthData = () => {
-  console.log('Clearing all authentication data');
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('userData');
-  sessionStorage.removeItem('adminToken');
-  sessionStorage.removeItem('userData');
-  sessionStorage.removeItem('sessionAuth');
+  localStorage.removeItem(USER_DATA_KEY);
+  sessionStorage.removeItem(SESSION_AUTH_KEY);
   
-  // Clear cookies too
-  document.cookie.split(";").forEach(function(c) {
-    document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-  });
+  console.log('User logged out successfully');
 };
 
-
-// Check if user is authenticated
+/**
+ * Check if user is authenticated
+ */
 export const isAuthenticated = (): boolean => {
   try {
     const { token } = getStoredAuth();
     const hasToken = !!token && typeof token === 'string' && token.trim() !== '';
     
     // Also check for session authentication flag
-    const hasSessionToken = sessionStorage.getItem('sessionAuth') === 'true';
+    const hasSessionToken = sessionStorage.getItem(SESSION_AUTH_KEY) === 'true';
     
     return hasToken && hasSessionToken;
   } catch (error) {
@@ -84,30 +124,29 @@ export const isAuthenticated = (): boolean => {
   }
 };
 
-
-
-// Check if user is admin
+/**
+ * Check if authenticated user is an admin
+ */
 export const isAdmin = (): boolean => {
   try {
     const userData = getCurrentUser();
-    const isAdminUser = userData?.user?.is_staff || false;
-    console.log('Checking admin status:', isAdminUser);
-    return isAdminUser;
+    return userData?.user?.is_staff || false;
   } catch (error) {
     console.error('Error checking admin status:', error);
     return false;
   }
 };
 
-// Get current user data
+/**
+ * Get current authenticated user data
+ */
 export const getCurrentUser = () => {
   if (!isAuthenticated()) {
     return null;
   }
   
   try {
-    // Return stored user info
-    const userDataStr = localStorage.getItem('userData');
+    const userDataStr = localStorage.getItem(USER_DATA_KEY);
     if (!userDataStr) {
       return null;
     }
@@ -117,12 +156,14 @@ export const getCurrentUser = () => {
       user: JSON.parse(userDataStr)
     };
   } catch (error) {
-    console.error('Error parsing user data:', error);
+    console.error('Error getting current user:', error);
     return null;
   }
 };
 
-// Generate auth header for API requests
+/**
+ * Generate auth header for API requests
+ */
 export const authHeader = (): Record<string, string> => {
   try {
     const { token } = getStoredAuth();
@@ -130,9 +171,10 @@ export const authHeader = (): Record<string, string> => {
     if (token) {
       return { 'Authorization': `Token ${token}` };
     }
+    
+    return {};
   } catch (error) {
     console.error('Error generating auth header:', error);
+    return {};
   }
-  
-  return {};
 };

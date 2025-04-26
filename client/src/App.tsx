@@ -5,7 +5,7 @@ import Footer from './components/Footer';
 import Home from './pages/home';
 import Dashboard from './components/Dashboard';
 import Login from './admin/Login';
-import { isAuthenticated, clearAllAuthData } from './services/auth';
+import { isAuthenticated } from './services/auth';
 import './App.css';
 
 // Protected route component to handle authentication
@@ -84,9 +84,9 @@ function App() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    // Clear authentication data on app initialization to force login
-    // This ensures the user must log in every time they visit the site
-    clearAllAuthData();
+    // Don't clear authentication data on app initialization
+    // This ensures the user stays logged in when they visit the site
+    // clearAllAuthData();
     
     // Simulate loading time or check initialization
     const timer = setTimeout(() => {
