@@ -1,4 +1,5 @@
-// client/src/api/header.ts
+// Fix 2: Update client/src/api/header.ts to properly handle token authentication
+// File: client/src/api/header.ts
 
 /**
  * Base API Client that ensures cookies are sent with requests
@@ -18,7 +19,6 @@ export const apiClient = {
       
       const response = await fetch(url, {
         method: 'GET',
-        credentials: 'include', // Important: this ensures cookies are sent
         headers,
       });
       
@@ -58,7 +58,6 @@ export const apiClient = {
       
       const response = await fetch(url, {
         method: 'POST',
-        credentials: 'include', // Important: this ensures cookies are sent
         headers,
         body: JSON.stringify(data),
       });
@@ -90,7 +89,7 @@ export const apiClient = {
     }
   },
   
-  // Add other methods (PUT, DELETE, etc.) with similar error handling
+  // Other methods remain the same...
   put: async (url: string, data: any, token?: string) => {
     try {
       const headers: HeadersInit = {
@@ -104,7 +103,6 @@ export const apiClient = {
       
       const response = await fetch(url, {
         method: 'PUT',
-        credentials: 'include',
         headers,
         body: JSON.stringify(data),
       });
@@ -141,7 +139,6 @@ export const apiClient = {
       
       const response = await fetch(url, {
         method: 'DELETE',
-        credentials: 'include',
         headers,
       });
       
@@ -169,3 +166,4 @@ export const apiClient = {
     }
   }
 };
+

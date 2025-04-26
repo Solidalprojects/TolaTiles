@@ -1,4 +1,3 @@
-// client/src/admin/Login.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../services/auth';
@@ -35,6 +34,7 @@ const Login: React.FC = () => {
       // Check if user is admin before allowing access to dashboard
       if (data.user && data.user.is_staff) {
         console.log('Login successful - redirecting to dashboard');
+        sessionStorage.setItem('sessionAuth', 'true');
         navigate('/auth/dashboard');
       } else {
         setError('Access denied. Admin privileges required.');
@@ -63,7 +63,7 @@ const Login: React.FC = () => {
         setError('Server not responding. Please check your connection.');
       } else {
         // Something else happened
-        setError('Login failed. Please try again later.');
+        setError('Login failed: ' + (error.message || 'Please try again later.'));
       }
       
       // Clear session auth flag on any error
