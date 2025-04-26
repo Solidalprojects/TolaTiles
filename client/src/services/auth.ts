@@ -12,14 +12,28 @@ const API_URL = 'http://localhost:8000/api/';
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
     console.log('Attempting login with:', credentials.username);
+    console.log('API URL:', `${API_URL}auth/login/`);
+    
+    // Log the request data
+    console.log('Request payload:', {
+      username: credentials.username,
+      password: '********' // Don't log actual password
+    });
     
     // Make sure we're sending the proper format
     const response = await axios.post(`${API_URL}auth/login/`, {
       username: credentials.username,
       password: credentials.password
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      }
     });
     
-    console.log('Login response:', response.status);
+    console.log('Login response status:', response.status);
+    console.log('Login response headers:', response.headers);
+    console.log('Login response data structure:', Object.keys(response.data));
     
     // Check if we have access token in the response
     if (response.data && response.data.access) {
@@ -31,12 +45,15 @@ export const login = async (credentials: LoginCredentials): Promise<AuthResponse
       throw new Error('Authentication failed: Invalid response format');
     }
   } catch (error: any) {
-    console.error('Login error:', error);
+    console.error('Login error details:', error);
     
     if (axios.isAxiosError(error) && error.response) {
-      console.error('Server response error:', error.response.data);
+      console.error('Server response error status:', error.response.status);
+      console.error('Server response error data:', error.response.data);
+      console.error('Server response error headers:', error.response.headers);
       throw error;
     } else {
+      console.error('Non-Axios error or network error:', error.message);
       throw new Error('Network error occurred during login');
     }
   }

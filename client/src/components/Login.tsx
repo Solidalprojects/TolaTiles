@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login, LoginCredentials } from '../services/auth';
+import { login} from '../services/auth';
+import { LoginCredentials } from '../types/types';
+
 
 const Login = () => {
   const [credentials, setCredentials] = useState<LoginCredentials>({
@@ -9,6 +11,7 @@ const Login = () => {
   });
   const [loading, setLoading] = useState<boolean>(false);
   const [message, setMessage] = useState<string>('');
+  const [detailedError, setDetailedError] = useState<string>('');
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -19,6 +22,7 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage('');
+    setDetailedError('');
     setLoading(true);
 
     try {
@@ -29,26 +33,33 @@ const Login = () => {
     } catch (error: any) {
       console.error('Login error:', error);
       let errorMessage = 'An error occurred during login';
+      let detailedErrorInfo = '';
       
       // Extract detailed error message from response if available
-      if (error.response && error.response.data) {
-        if (error.response.data.error) {
-          errorMessage = error.response.data.error;
-          
-          // If there's a more detailed error message, add it
-          if (error.response.data.detail) {
-            errorMessage += `: ${error.response.data.detail}`;
+      if (error.response) {
+        console.log('Error response status:', error.response.status);
+        console.log('Error response data:', error.response.data);
+        
+        if (error.response.data) {
+          if (error.response.data.error) {
+            errorMessage = error.response.data.error;
+            
+            // If there's a more detailed error message, add it
+            if (error.response.data.detail) {
+              detailedErrorInfo = error.response.data.detail;
+            }
+          } else if (error.response.data.message) {
+            errorMessage = error.response.data.message;
+          } else if (typeof error.response.data === 'string') {
+            errorMessage = error.response.data;
           }
-        } else if (error.response.data.message) {
-          errorMessage = error.response.data.message;
-        } else if (typeof error.response.data === 'string') {
-          errorMessage = error.response.data;
         }
       } else if (error.message) {
         errorMessage = error.message;
       }
       
       setMessage(errorMessage);
+      setDetailedError(detailedErrorInfo);
     } finally {
       setLoading(false);
     }
@@ -63,6 +74,7 @@ const Login = () => {
           <div className="mb-6 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
             <p className="font-medium">Login Failed</p>
             <p>{message}</p>
+            {detailedError && <p className="mt-2 text-sm">{detailedError}</p>}
           </div>
         )}
         

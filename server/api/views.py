@@ -21,13 +21,18 @@ class IsAdminOrReadOnly(permissions.BasePermission):
             return True
         return request.user and request.user.is_staff
 
+# server/api/views.py - login_view function updated
+
 @api_view(['POST'])
 def login_view(request):
+    """Handle user login and return JWT tokens on success."""
     username = request.data.get('username')
     password = request.data.get('password')
     
     # Debug info
-    logger.debug(f"Login attempt for user: {username}")
+    print(f"Login attempt for user: {username}")
+    print(f"Request data received: {request.data}")
+    print(f"Request headers: {request.headers}")
     
     if not username or not password:
         return Response(
@@ -35,29 +40,32 @@ def login_view(request):
             status=status.HTTP_400_BAD_REQUEST
         )
     
-    user = authenticate(request, username=username, password=password)
+    user = authenticate(username=username, password=password)
     
     if user is not None:
         # Successfully authenticated
-        logger.debug(f"User {username} authenticated successfully")
+        print(f"User {username} authenticated successfully")
         refresh = RefreshToken.for_user(user)
         
-        return Response({
+        response_data = {
             'refresh': str(refresh),
             'access': str(refresh.access_token),
             'user': UserSerializer(user).data
-        })
+        }
+        print(f"Generated token response: {response_data}")
+        
+        return Response(response_data)
     else:
         # Authentication failed
-        logger.debug(f"Authentication failed for user: {username}")
+        print(f"Authentication failed for user: {username}")
         
         # Check if user exists (helps with debugging)
         user_exists = User.objects.filter(username=username).exists()
         if user_exists:
-            logger.debug(f"User {username} exists but password is incorrect")
+            print(f"User {username} exists but password is incorrect")
             error_message = "Invalid password"
         else:
-            logger.debug(f"User {username} does not exist")
+            print(f"User {username} does not exist")
             error_message = "User not found"
         
         return Response(
