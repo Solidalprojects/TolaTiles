@@ -1,6 +1,3 @@
-from django.shortcuts import render
-
-# Create your views here.
 # server/api/views.py
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import api_view, permission_classes
@@ -13,6 +10,10 @@ from .models import TileCategory, TileImage, Project, ProjectImage
 from .serializers import (UserSerializer, TileCategorySerializer, 
                           TileImageSerializer, ProjectSerializer, 
                           ProjectImageSerializer)
+import logging
+
+# Set up logger
+logger = logging.getLogger(__name__)
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -25,9 +26,20 @@ def login_view(request):
     username = request.data.get('username')
     password = request.data.get('password')
     
-    user = authenticate(username=username, password=password)
+    # Debug info
+    logger.debug(f"Login attempt for user: {username}")
+    
+    if not username or not password:
+        return Response(
+            {'error': 'Username and password are required'}, 
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    
+    user = authenticate(request, username=username, password=password)
     
     if user is not None:
+        # Successfully authenticated
+        logger.debug(f"User {username} authenticated successfully")
         refresh = RefreshToken.for_user(user)
         
         return Response({
@@ -36,7 +48,22 @@ def login_view(request):
             'user': UserSerializer(user).data
         })
     else:
-        return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+        # Authentication failed
+        logger.debug(f"Authentication failed for user: {username}")
+        
+        # Check if user exists (helps with debugging)
+        user_exists = User.objects.filter(username=username).exists()
+        if user_exists:
+            logger.debug(f"User {username} exists but password is incorrect")
+            error_message = "Invalid password"
+        else:
+            logger.debug(f"User {username} does not exist")
+            error_message = "User not found"
+        
+        return Response(
+            {'error': 'Invalid credentials', 'detail': error_message}, 
+            status=status.HTTP_401_UNAUTHORIZED
+        )
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

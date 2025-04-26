@@ -11,14 +11,17 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.migrations/
+**/migrations/
 db.sqlite3
 
-# Vite / Node.js
-node_modules/
-dist/
-.env
-.vite/
+# Vite / Node.js (Frontend client)
+client/node_modules/
+client/dist/
+client/.env
+client/.vite/
+client/package-lock.json
+client/yarn.lock
+client/pnpm-lock.yaml
 
 # macOS
 .DS_Store

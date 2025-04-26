@@ -12,6 +12,7 @@ router.register(r'project-images', views.ProjectImageViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    # Make sure the paths match exactly what the frontend expects
     path('auth/login/', views.login_view, name='login'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/user/', views.get_user_info, name='user_info'),

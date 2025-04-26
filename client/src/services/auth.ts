@@ -11,13 +11,30 @@ const API_URL = 'http://localhost:8000/api/';
  */
 export const login = async (credentials: LoginCredentials): Promise<AuthResponse> => {
   try {
-    const response = await axios.post(`${API_URL}auth/login/`, credentials);
-    if (response.data.access) {
+    console.log('Attempting login with:', credentials.username);
+    
+    // Make sure we're sending the proper format
+    const response = await axios.post(`${API_URL}auth/login/`, {
+      username: credentials.username,
+      password: credentials.password
+    });
+    
+    console.log('Login response:', response.status);
+    
+    // Check if we have access token in the response
+    if (response.data && response.data.access) {
+      console.log('Login successful, storing user data');
       localStorage.setItem('user', JSON.stringify(response.data));
+      return response.data;
+    } else {
+      console.error('Invalid response format:', response.data);
+      throw new Error('Authentication failed: Invalid response format');
     }
-    return response.data;
-  } catch (error) {
+  } catch (error: any) {
+    console.error('Login error:', error);
+    
     if (axios.isAxiosError(error) && error.response) {
+      console.error('Server response error:', error.response.data);
       throw error;
     } else {
       throw new Error('Network error occurred during login');
@@ -50,7 +67,7 @@ export const getCurrentUser = (): AuthResponse | null => {
  */
 export const isTokenExpired = (): boolean => {
   const user = getCurrentUser();
-  if (!user) return true;
+  if (!user || !user.access) return true;
   
   try {
     // JWT tokens are in three parts separated by dots
@@ -61,6 +78,7 @@ export const isTokenExpired = (): boolean => {
     const exp = decoded.exp * 1000; // Convert to milliseconds
     return Date.now() >= exp;
   } catch (error) {
+    console.error('Token validation error:', error);
     return true;
   }
 };
@@ -72,13 +90,6 @@ export const isTokenExpired = (): boolean => {
 export const authHeader = (): Record<string, string> => {
   const user = getCurrentUser();
   if (user && user.access) {
-    // Check if token is expired
-    if (isTokenExpired()) {
-      // Token is expired, handle refresh or logout
-      logout();
-      window.location.href = '/auth/login';
-      return {};
-    }
     return { Authorization: `Bearer ${user.access}` };
   }
   return {};
@@ -100,14 +111,16 @@ export const refreshToken = async (): Promise<AuthResponse> => {
     });
     
     // Update localStorage with new tokens
-    localStorage.setItem('user', JSON.stringify({
+    const updatedUser = {
       ...user,
       access: response.data.access,
-      refresh: response.data.refresh
-    }));
+      refresh: response.data.refresh || user.refresh
+    };
     
-    return response.data;
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    return updatedUser;
   } catch (error) {
+    console.error('Token refresh error:', error);
     logout();
     throw error;
   }
@@ -125,11 +138,10 @@ axios.interceptors.response.use(
       
       try {
         // Try to refresh the token
-        await refreshToken();
+        const refreshedUser = await refreshToken();
         // Update the header with the new token
-        const user = getCurrentUser();
-        if (user && user.access) {
-          originalRequest.headers['Authorization'] = `Bearer ${user.access}`;
+        if (refreshedUser && refreshedUser.access) {
+          originalRequest.headers['Authorization'] = `Bearer ${refreshedUser.access}`;
         }
         // Retry the original request
         return axios(originalRequest);
