@@ -2,6 +2,7 @@
 import { apiClient } from './header';
 import { API_ENDPOINTS } from './api';
 import { User } from '../types/types';
+import { setStoredAuth } from './storedAuth';
 
 export interface LoginFormData {
   username: string;
@@ -21,6 +22,11 @@ export interface AuthResponse {
 export async function login(credentials: LoginFormData): Promise<AuthResponse> {
   try {
     const response = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, credentials);
+    
+    // Store token directly using setStoredAuth
+    if (response.token) {
+      setStoredAuth(response.token);
+    }
     
     // Store user data for later use
     if (response.user) {

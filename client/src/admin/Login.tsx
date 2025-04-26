@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../api/loginauth';
 import { API_ENDPOINTS } from '../api/api';
+import { setStoredAuth } from '../api/storedAuth';
 import { Eye, EyeOff, Loader, Lock, User, AlertCircle } from 'lucide-react';
 
 const Login = () => {
@@ -14,6 +15,11 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
+  // When login component mounts, clear any existing sessionAuth flag
+  useEffect(() => {
+    sessionStorage.removeItem('sessionAuth');
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -24,11 +30,24 @@ const Login = () => {
       // Use the login function from auth service
       const data = await login(formData);
       
-      // Check if user is admin before allowing access to dashboard
-      if (data.user && data.user.is_staff) {
-        navigate('/auth/dashboard');
+      // Explicitly store token in localStorage using setStoredAuth
+      if (data.token) {
+        setStoredAuth(data.token);
+        
+        // Also set session authentication flag
+        sessionStorage.setItem('sessionAuth', 'true');
+        
+        // Check if user is admin before allowing access to dashboard
+        if (data.user && data.user.is_staff) {
+          console.log('Login successful - redirecting to dashboard');
+          navigate('/auth/dashboard');
+        } else {
+          setError('Access denied. Admin privileges required.');
+          // Clear the session auth flag if access is denied
+          sessionStorage.removeItem('sessionAuth');
+        }
       } else {
-        setError('Access denied. Admin privileges required.');
+        setError('Authentication failed. No token received.');
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -52,6 +71,9 @@ const Login = () => {
         // Something else happened
         setError('Login failed. Please try again later.');
       }
+      
+      // Clear session auth flag on any error
+      sessionStorage.removeItem('sessionAuth');
     } finally {
       setIsLoading(false);
     }

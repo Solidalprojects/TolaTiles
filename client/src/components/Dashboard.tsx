@@ -1,7 +1,7 @@
 // client/src/components/Dashboard.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentUser, isAuthenticated } from '../services/auth';
+import { getCurrentUser, isAuthenticated, logout } from '../services/auth';
 import DashboardSidebar from './DasboardsSidebar';
 import TileManager from './TileManager';
 import CategoryManager from './CategoryManager';
@@ -24,6 +24,22 @@ const Dashboard = () => {
     const userData = getCurrentUser();
     setUser(userData?.user || null);
     setLoading(false);
+
+    // Set up event listeners for page unload/navigation
+    const handleBeforeUnload = () => {
+      // Clear session authentication when user leaves the page
+      sessionStorage.removeItem('sessionAuth');
+    };
+
+    // Listen for page unload
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Listen for navigation away from dashboard
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Also remove session auth when component unmounts
+      sessionStorage.removeItem('sessionAuth');
+    };
   }, [navigate]);
 
   const renderActiveComponent = () => {

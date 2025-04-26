@@ -5,14 +5,38 @@ import Footer from './components/Footer';
 import Home from './pages/home';
 import Dashboard from './components/Dashboard';
 import Login from './admin/Login';
-import { isAuthenticated } from './services/auth';
+import { isAuthenticated, clearAllAuthData } from './services/auth';
 import './App.css';
 
 // Protected route component to handle authentication
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
-  const authenticated = isAuthenticated();
+  // Force re-evaluation of auth status with a state
+  const [isAuth, setIsAuth] = useState<boolean>(false);
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
   
-  if (!authenticated) {
+  useEffect(() => {
+    const checkAuth = () => {
+      const authenticated = isAuthenticated();
+      setIsAuth(authenticated);
+      setCheckingAuth(false);
+    };
+    
+    checkAuth();
+  }, []);
+  
+  if (checkingAuth) {
+    // Show loading while checking auth
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (!isAuth) {
     // Redirect to login if not authenticated
     return <Navigate to="/auth/login" replace />;
   }
@@ -22,9 +46,33 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
 
 // Public route component that redirects to dashboard if already logged in
 const PublicOnlyRoute = ({ children }: { children: JSX.Element }) => {
-  const authenticated = isAuthenticated();
+  // Force re-evaluation of auth status with a state
+  const [isAuth, setIsAuth] = useState<boolean>(false);
+  const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
   
-  if (authenticated) {
+  useEffect(() => {
+    const checkAuth = () => {
+      const authenticated = isAuthenticated();
+      setIsAuth(authenticated);
+      setCheckingAuth(false);
+    };
+    
+    checkAuth();
+  }, []);
+  
+  if (checkingAuth) {
+    // Show loading while checking auth
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  if (isAuth) {
     // Redirect to dashboard if already authenticated
     return <Navigate to="/auth/dashboard" replace />;
   }
@@ -36,6 +84,10 @@ function App() {
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
+    // Clear authentication data on app initialization to force login
+    // This ensures the user must log in every time they visit the site
+    clearAllAuthData();
+    
     // Simulate loading time or check initialization
     const timer = setTimeout(() => {
       setLoading(false);
