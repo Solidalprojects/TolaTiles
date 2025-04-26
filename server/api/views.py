@@ -63,17 +63,16 @@ def login_view(request):
     else:
         # Check if user exists (helps with debugging)
         user_exists = User.objects.filter(username=username).exists()
-        error_message = "Invalid credentials"
         
         if user_exists:
             logger.warning(f"User {username} exists but password is incorrect")
-            error_detail = "Invalid password"
+            error_message = "Invalid credentials"
         else:
             logger.warning(f"User {username} does not exist")
-            error_detail = "User not found"
+            error_message = "Invalid credentials"
         
         return Response(
-            {'error': error_message, 'detail': error_detail}, 
+            {'error': error_message}, 
             status=status.HTTP_401_UNAUTHORIZED
         )
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { login } from '../services/auth';
+import { login } from '../api/loginauth';
 import { API_ENDPOINTS } from '../api/api';
 import { Eye, EyeOff, Loader, Lock, User, AlertCircle } from 'lucide-react';
 
@@ -20,6 +20,7 @@ const Login = () => {
     setIsLoading(true);
 
     try {
+      console.log('Attempting login with:', { username: formData.username });
       // Use the login function from auth service
       const data = await login(formData);
       
@@ -39,6 +40,8 @@ const Login = () => {
           setError('Invalid username or password');
         } else if (error.response.data && error.response.data.detail) {
           setError(error.response.data.detail);
+        } else if (error.response.data && error.response.data.error) {
+          setError(error.response.data.error);
         } else {
           setError('Authentication failed. Please try again.');
         }

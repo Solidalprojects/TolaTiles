@@ -3,6 +3,7 @@ from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from . import views
+from .views_auth import admin_login
 
 router = DefaultRouter()
 router.register(r'categories', views.TileCategoryViewSet)
@@ -16,8 +17,7 @@ urlpatterns = [
     path('', include(router.urls)),
     
     # Authentication endpoints
-    path('auth/login/', views.login_view, name='login'),
-    path('auth/login', views.login_view, name='login_no_slash'),  # For clients that don't use trailing slash
+    path('auth/login/', admin_login, name='login'),
     path('auth/register/', views.register_view, name='register'),
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
