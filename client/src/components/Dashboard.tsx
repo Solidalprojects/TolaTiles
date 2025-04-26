@@ -1,7 +1,7 @@
 // client/src/components/Dashboard.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentUser } from '../services/auth';
+import { getCurrentUser, isAuthenticated } from '../services/auth';
 import DashboardSidebar from './DasboardsSidebar';
 import TileManager from './TileManager';
 import CategoryManager from './CategoryManager';
@@ -16,13 +16,13 @@ const Dashboard = () => {
   
   useEffect(() => {
     // Check if user is logged in
-    const userData = getCurrentUser();
-    if (!userData) {
+    if (!isAuthenticated()) {
       navigate('/auth/login');
       return;
     }
     
-    setUser(userData.user);
+    const userData = getCurrentUser();
+    setUser(userData?.user || null);
     setLoading(false);
   }, [navigate]);
 

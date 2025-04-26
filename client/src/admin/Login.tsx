@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LoginFormData } from './auth';
-import { setStoredAuth } from './loginauth';
+import { login } from '../services/auth';
 import { API_ENDPOINTS } from '../api/api';
-import { apiClient } from '../api/header';
-import { Eye, EyeOff, Loader } from 'lucide-react';
+import { Eye, EyeOff, Loader, Lock, User, AlertCircle } from 'lucide-react';
 
-const AdminLogin = () => {
+const Login = () => {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState<LoginFormData>({
+  const [formData, setFormData] = useState({
     username: '',
     password: '',
   });
@@ -22,12 +20,35 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      const data = await apiClient.post(API_ENDPOINTS.AUTH.LOGIN, formData);
-      setStoredAuth(data.token);
-      navigate('/auth/dashboard');
-    } catch (error) {
+      // Use the login function from auth service
+      const data = await login(formData);
+      
+      // Check if user is admin before allowing access to dashboard
+      if (data.user && data.user.is_staff) {
+        navigate('/auth/dashboard');
+      } else {
+        setError('Access denied. Admin privileges required.');
+      }
+    } catch (error: any) {
       console.error('Login error:', error);
-      setError('Invalid credentials or connection issue');
+      
+      // Handle different error scenarios
+      if (error.response) {
+        // Server responded with an error
+        if (error.response.status === 401) {
+          setError('Invalid username or password');
+        } else if (error.response.data && error.response.data.detail) {
+          setError(error.response.data.detail);
+        } else {
+          setError('Authentication failed. Please try again.');
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        setError('Server not responding. Please check your connection.');
+      } else {
+        // Something else happened
+        setError('Login failed. Please try again later.');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -40,32 +61,49 @@ const AdminLogin = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg">
-        <h2 className="text-2xl font-bold text-center mb-6">Admin Login</h2>
+        <div className="text-center mb-8">
+          <h2 className="text-2xl font-bold text-gray-800">Admin Login</h2>
+          <p className="text-gray-600 mt-1">Sign in to access the admin dashboard</p>
+        </div>
+        
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="flex items-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <AlertCircle size={18} className="mr-2" />
+            <span>{error}</span>
           </div>
         )}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        
+        <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-1">Username</label>
-            <input
-              type="text"
-              value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              required
-              disabled={isLoading}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
             <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <User size={18} className="text-gray-400" />
+              </div>
+              <input
+                type="text"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your username"
+                required
+                disabled={isLoading}
+              />
+            </div>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Lock size={18} className="text-gray-400" />
+              </div>
               <input
                 type={showPassword ? "text" : "password"}
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Enter your password"
                 required
                 disabled={isLoading}
               />
@@ -78,6 +116,7 @@ const AdminLogin = () => {
               </button>
             </div>
           </div>
+          
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center justify-center"
@@ -86,16 +125,28 @@ const AdminLogin = () => {
             {isLoading ? (
               <>
                 <Loader size={18} className="animate-spin mr-2" />
-                Logging in...
+                Signing in...
               </>
             ) : (
-              'Login'
+              'Sign In'
             )}
           </button>
         </form>
+        
+        <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+          <p className="text-sm text-gray-600">
+            Forgot your login details?{' '}
+            <button 
+              className="text-blue-600 hover:text-blue-800 font-medium"
+              onClick={() => alert('Please contact the system administrator for password reset.')}
+            >
+              Contact Admin
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
 };
 
-export default AdminLogin;
+export default Login;

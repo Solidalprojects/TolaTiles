@@ -1,82 +1,132 @@
 import { useState, useEffect } from "react";
-import { Link, useLocation } from 'react-router-dom';
-import { getCurrentUser, logout } from '../services/auth';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { getCurrentUser, logout, isAuthenticated, isAdmin } from '../services/auth';
 import logo from '../assets/react.svg';
+import { Menu, X, LogOut, User, ChevronDown, Home, Grid, Briefcase, Settings } from 'lucide-react';
 
 const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [username, setUsername] = useState('');
   const location = useLocation();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const user = getCurrentUser();
-    setIsLoggedIn(!!user);
+    checkAuthStatus();
   }, [location.pathname]);
+
+  const checkAuthStatus = () => {
+    const authenticated = isAuthenticated();
+    setIsLoggedIn(authenticated);
+    setIsAdminUser(isAdmin());
+    
+    if (authenticated) {
+      const userData = getCurrentUser();
+      setUsername(userData?.user?.username || 'User');
+    }
+  };
 
   const handleLogout = () => {
     logout();
-    window.location.href = '/auth/login';
+    setIsLoggedIn(false);
+    setIsAdminUser(false);
+    setIsProfileMenuOpen(false);
+    navigate('/auth/login');
+  };
+
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
+  const toggleProfileMenu = () => {
+    setIsProfileMenuOpen(!isProfileMenuOpen);
   };
 
   return (
     <nav className="bg-gradient-to-r from-blue-900 to-blue-700 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16 items-center">
-          <div className="flex items-center">
-            <Link to="/" className="flex items-center space-x-2">
-              <img 
-                src={logo} 
-                alt="Tola Tiles" 
-                className="h-10 w-auto"
-              />
-              <span className="text-white font-bold text-lg">Tola Tiles</span>
-            </Link>
-          </div>
+          {/* Logo and brand name */}
+          <Link to="/" className="flex items-center space-x-2">
+            <img 
+              src={logo} 
+              alt="Tola Tiles" 
+              className="h-10 w-auto"
+            />
+            <span className="text-white font-bold text-lg">Tola Tiles</span>
+          </Link>
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link to="/" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors">
-              Home
+            <Link to="/" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
+              <Home size={18} className="mr-1" />
+              <span>Home</span>
             </Link>
-            <Link to="/projects" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors">
-              Projects
+            <Link to="/projects" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
+              <Briefcase size={18} className="mr-1" />
+              <span>Projects</span>
             </Link>
-            <Link to="/categories" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors">
-              Categories
+            <Link to="/categories" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
+              <Grid size={18} className="mr-1" />
+              <span>Categories</span>
             </Link>
+            
             {isLoggedIn ? (
-              <div className="flex items-center space-x-2">
-                <Link to="/auth/dashboard" className="text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-md transition-colors">
-                  Dashboard
-                </Link>
-                <button 
-                  onClick={handleLogout}
-                  className="text-white bg-red-600 hover:bg-red-500 px-4 py-2 rounded-md transition-colors"
-                >
-                  Logout
-                </button>
+              <div className="relative ml-3">
+                <div>
+                  <button
+                    type="button"
+                    className="flex items-center text-white px-3 py-2 rounded-md hover:bg-blue-800 transition-colors focus:outline-none"
+                    onClick={toggleProfileMenu}
+                  >
+                    <User size={18} className="mr-2" />
+                    <span>{username}</span>
+                    <ChevronDown size={16} className="ml-1" />
+                  </button>
+                </div>
+                
+                {isProfileMenuOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                    <Link 
+                      to="/auth/dashboard" 
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      <Settings size={16} className="mr-2" />
+                      Dashboard
+                    </Link>
+                    <button
+                      onClick={handleLogout}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    >
+                      <LogOut size={16} className="mr-2" />
+                      Sign out
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
-              <Link to="/auth/login" className="text-white bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded-md transition-colors">
-                Login
+              <Link to="/auth/login" className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-md transition-colors flex items-center">
+                <User size={18} className="mr-2" />
+                Sign In
               </Link>
             )}
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile menu button */}
           <div className="md:hidden">
             <button 
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={toggleMobileMenu}
               className="text-white hover:text-blue-200 focus:outline-none"
+              aria-expanded={isMobileMenuOpen}
+              aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? (
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <X size={24} />
               ) : (
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
+                <Menu size={24} />
               )}
             </button>
           </div>
@@ -85,36 +135,44 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-blue-800">
-          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+        <div className="md:hidden bg-blue-800 shadow-inner">
+          <div className="px-2 pt-2 pb-3 space-y-1">
             <Link 
               to="/" 
-              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md"
+              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
+              <Home size={18} className="mr-2" />
               Home
             </Link>
             <Link 
               to="/projects" 
-              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md"
+              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
+              <Briefcase size={18} className="mr-2" />
               Projects
             </Link>
             <Link 
               to="/categories" 
-              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md"
+              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
+              <Grid size={18} className="mr-2" />
               Categories
             </Link>
+            
             {isLoggedIn ? (
               <>
+                <div className="px-3 py-2 text-blue-300 font-medium border-t border-blue-700 mt-2 pt-2">
+                  Signed in as <span className="font-bold">{username}</span>
+                </div>
                 <Link 
                   to="/auth/dashboard" 
-                  className="text-white bg-blue-600 hover:bg-blue-500 block px-3 py-2 rounded-md"
+                  className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
+                  <Settings size={18} className="mr-2" />
                   Dashboard
                 </Link>
                 <button 
@@ -122,18 +180,20 @@ const Navbar = () => {
                     handleLogout();
                     setIsMobileMenuOpen(false);
                   }}
-                  className="text-white bg-red-600 hover:bg-red-500 w-full text-left px-3 py-2 rounded-md"
+                  className="text-white hover:bg-blue-700 w-full text-left px-3 py-2 rounded-md flex items-center"
                 >
-                  Logout
+                  <LogOut size={18} className="mr-2" />
+                  Sign Out
                 </button>
               </>
             ) : (
               <Link 
                 to="/auth/login" 
-                className="text-white bg-blue-600 hover:bg-blue-500 block px-3 py-2 rounded-md"
+                className="bg-blue-600 hover:bg-blue-500 text-white block px-3 py-2 rounded-md flex items-center"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Login
+                <User size={18} className="mr-2" />
+                Sign In
               </Link>
             )}
           </div>

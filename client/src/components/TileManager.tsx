@@ -1,22 +1,11 @@
 // client/src/components/TileManager.tsx
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { authHeader } from '../services/auth';
-
-interface Tile {
-  id: number;
-  title: string;
-  description: string;
-  image: string;
-  category: number;
-  featured: boolean;
-  created_at: string;
-}
-
-interface Category {
-  id: number;
-  name: string;
-}
+import { Tile, Category } from '../types/types';
+import { tileService, categoryService } from '../services/api';
+import { 
+  AlertCircle, Loader, Plus, X, Edit, Trash2, 
+  Star, Image, Search, Filter 
+} from 'lucide-react';
 
 const TileManager = () => {
   const [tiles, setTiles] = useState<Tile[]>([]);
@@ -31,32 +20,53 @@ const TileManager = () => {
     featured: false,
   });
   const [editingTile, setEditingTile] = useState<Tile | null>(null);
-
-  const API_URL = 'http://localhost:8000/api/';
+  const [error, setError] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>('');
+  const [filterFeatured, setFilterFeatured] = useState<boolean | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   useEffect(() => {
-    fetchTiles();
-    fetchCategories();
+    fetchData();
   }, []);
 
-  const fetchTiles = async () => {
+  const fetchData = async () => {
     try {
-      const response = await axios.get(`${API_URL}tiles/`, { headers: authHeader() });
-      setTiles(response.data);
-    } catch (error) {
-      console.error('Error fetching tiles:', error);
+      setLoading(true);
+      setError(null);
+      
+      // Fetch categories first
+      const categoriesData = await categoryService.getCategories();
+      setCategories(categoriesData);
+      
+      // Fetch tiles with or without filters
+      const filters = buildFilters();
+      const tilesData = await tileService.getTiles(filters);
+      setTiles(tilesData);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setError('Failed to load data. Please try again later.');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchCategories = async () => {
-    try {
-      const response = await axios.get(`${API_URL}categories/`, { headers: authHeader() });
-      setCategories(response.data);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-    }
+  const buildFilters = () => {
+    const filters: any = {};
+    if (filterCategory) filters.category = filterCategory;
+    if (filterFeatured !== null) filters.featured = filterFeatured;
+    if (searchTerm) filters.search = searchTerm;
+    return filters;
+  };
+
+  const handleSearch = () => {
+    fetchData();
+  };
+
+  const resetFilters = () => {
+    setFilterCategory('');
+    setFilterFeatured(null);
+    setSearchTerm('');
+    fetchData();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -79,47 +89,31 @@ const TileManager = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    const formData = new FormData();
-    formData.append('title', newTile.title);
-    formData.append('description', newTile.description || '');
-    formData.append('category', newTile.category);
-    formData.append('featured', newTile.featured.toString());
-    
-    if (newTile.image) {
-      formData.append('image', newTile.image);
-    }
-    
     try {
       setLoading(true);
+      setError(null);
       
-      if (editingTile) {
-        await axios.patch(`${API_URL}tiles/${editingTile.id}/`, formData, {
-          headers: { 
-            ...authHeader(),
-            'Content-Type': 'multipart/form-data'
-          }
-        });
-      } else {
-        await axios.post(`${API_URL}tiles/`, formData, {
-          headers: { 
-            ...authHeader(),
-            'Content-Type': 'multipart/form-data'
-          }
-        });
+      const formData = new FormData();
+      formData.append('title', newTile.title);
+      formData.append('description', newTile.description || '');
+      formData.append('category', newTile.category);
+      formData.append('featured', newTile.featured.toString());
+      
+      if (newTile.image) {
+        formData.append('image', newTile.image);
       }
       
-      fetchTiles();
-      setShowAddForm(false);
-      setNewTile({
-        title: '',
-        description: '',
-        image: null,
-        category: '',
-        featured: false,
-      });
-      setEditingTile(null);
-    } catch (error) {
-      console.error('Error saving tile:', error);
+      if (editingTile) {
+        await tileService.updateTile(editingTile.id, formData);
+      } else {
+        await tileService.createTile(formData);
+      }
+      
+      fetchData();
+      resetForm();
+    } catch (err) {
+      console.error('Error saving tile:', err);
+      setError('Failed to save tile. Please try again later.');
     } finally {
       setLoading(false);
     }
@@ -129,10 +123,12 @@ const TileManager = () => {
     if (window.confirm('Are you sure you want to delete this tile?')) {
       try {
         setLoading(true);
-        await axios.delete(`${API_URL}tiles/${id}/`, { headers: authHeader() });
-        fetchTiles();
-      } catch (error) {
-        console.error('Error deleting tile:', error);
+        setError(null);
+        await tileService.deleteTile(id);
+        fetchData();
+      } catch (err) {
+        console.error('Error deleting tile:', err);
+        setError('Failed to delete tile. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -151,57 +147,155 @@ const TileManager = () => {
     setShowAddForm(true);
   };
 
+  const resetForm = () => {
+    setShowAddForm(false);
+    setEditingTile(null);
+    setNewTile({
+      title: '',
+      description: '',
+      image: null,
+      category: '',
+      featured: false,
+    });
+  };
+
   return (
-    <div className="tile-manager">
-      <div className="manager-header">
-        <h2>Manage Tiles</h2>
+    <div className="p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">Manage Tiles</h2>
         <button 
           onClick={() => {
-            setShowAddForm(!showAddForm);
-            setEditingTile(null);
-            setNewTile({
-              title: '',
-              description: '',
-              image: null,
-              category: '',
-              featured: false,
-            });
+            if (showAddForm) {
+              resetForm();
+            } else {
+              setShowAddForm(true);
+            }
           }}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
-          {showAddForm ? 'Cancel' : 'Add New Tile'}
+          {showAddForm ? (
+            <>
+              <X size={18} className="mr-2" />
+              Cancel
+            </>
+          ) : (
+            <>
+              <Plus size={18} className="mr-2" />
+              Add New Tile
+            </>
+          )}
         </button>
       </div>
 
+      {error && (
+        <div className="flex items-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+          <AlertCircle size={18} className="mr-2" />
+          <span className="block sm:inline">{error}</span>
+        </div>
+      )}
+
+      {!showAddForm && (
+        <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label htmlFor="searchTerm" className="block text-gray-700 mb-1 text-sm">Search</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="searchTerm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search tiles..."
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <Search size={18} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              </div>
+            </div>
+            <div>
+              <label htmlFor="filterCategory" className="block text-gray-700 mb-1 text-sm">Category</label>
+              <select
+                id="filterCategory"
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Categories</option>
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="filterFeatured" className="block text-gray-700 mb-1 text-sm">Featured Status</label>
+              <select
+                id="filterFeatured"
+                value={filterFeatured === null ? '' : filterFeatured.toString()}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setFilterFeatured(value === '' ? null : value === 'true');
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Tiles</option>
+                <option value="true">Featured Only</option>
+                <option value="false">Not Featured</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end mt-4 space-x-2">
+            <button
+              onClick={resetFilters}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+            >
+              Reset Filters
+            </button>
+            <button
+              onClick={handleSearch}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              <Filter size={18} className="mr-2" />
+              Apply Filters
+            </button>
+          </div>
+        </div>
+      )}
+
       {showAddForm && (
-        <form onSubmit={handleSubmit} className="tile-form">
-          <h3>{editingTile ? 'Edit Tile' : 'Add New Tile'}</h3>
-          <div className="form-group">
-            <label htmlFor="title">Title</label>
+        <form onSubmit={handleSubmit} className="bg-gray-50 p-6 rounded-lg mb-6">
+          <h3 className="text-xl font-semibold mb-4 text-gray-800">{editingTile ? 'Edit Tile' : 'Add New Tile'}</h3>
+          <div className="mb-4">
+            <label htmlFor="title" className="block text-gray-700 mb-2">Title</label>
             <input
               type="text"
               id="title"
               name="title"
               value={newTile.title}
               onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="description">Description</label>
+          <div className="mb-4">
+            <label htmlFor="description" className="block text-gray-700 mb-2">Description</label>
             <textarea
               id="description"
               name="description"
               value={newTile.description || ''}
               onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={4}
             />
           </div>
-          <div className="form-group">
-            <label htmlFor="category">Category</label>
+          <div className="mb-4">
+            <label htmlFor="category" className="block text-gray-700 mb-2">Category</label>
             <select
               id="category"
               name="category"
               value={newTile.category}
               onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
             >
               <option value="">Select Category</option>
@@ -212,56 +306,114 @@ const TileManager = () => {
               ))}
             </select>
           </div>
-          <div className="form-group">
-            <label htmlFor="image">Image</label>
-            <input
-              type="file"
-              id="image"
-              name="image"
-              onChange={handleFileChange}
-              accept="image/*"
-              required={!editingTile}
-            />
+          <div className="mb-4">
+            <label htmlFor="image" className="block text-gray-700 mb-2">
+              {editingTile ? 'New Image (Leave empty to keep current)' : 'Image'}
+            </label>
+            <div className="flex items-center">
+              <input
+                type="file"
+                id="image"
+                name="image"
+                onChange={handleFileChange}
+                accept="image/*"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required={!editingTile}
+              />
+              {editingTile && editingTile.image && (
+                <div className="ml-2">
+                  <img 
+                    src={`http://localhost:8000${editingTile.image}`}
+                    alt="Current tile image"
+                    className="h-12 w-12 object-cover rounded-md"
+                  />
+                </div>
+              )}
+            </div>
           </div>
-          <div className="form-group checkbox">
+          <div className="flex items-center mb-4">
             <input
               type="checkbox"
               id="featured"
               name="featured"
               checked={newTile.featured}
               onChange={handleInputChange}
+              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <label htmlFor="featured">Featured</label>
+            <label htmlFor="featured" className="ml-2 block text-gray-700">
+              Featured Tile
+            </label>
           </div>
-          <button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : 'Save Tile'}
-          </button>
+          <div className="flex justify-end">
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-blue-300"
+            >
+              {loading ? (
+                <>
+                  <Loader size={18} className="animate-spin mr-2" />
+                  Saving...
+                </>
+              ) : (
+                'Save Tile'
+              )}
+            </button>
+          </div>
         </form>
       )}
 
       {loading && !showAddForm ? (
-        <div className="loading">Loading tiles...</div>
+        <div className="flex justify-center items-center p-12">
+          <Loader size={24} className="animate-spin text-blue-600 mr-2" />
+          <span className="text-gray-600">Loading tiles...</span>
+        </div>
       ) : (
-        <div className="tiles-grid">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {tiles.length === 0 ? (
-            <p>No tiles found. Add some!</p>
+            <div className="col-span-full text-center py-12 bg-gray-50 rounded-lg">
+              <Image size={48} className="mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500">No tiles found. Add some!</p>
+            </div>
           ) : (
             tiles.map((tile) => (
-              <div key={tile.id} className="tile-card">
-                <img src={`http://localhost:8000${tile.image}`} alt={tile.title} />
-                <h3>{tile.title}</h3>
-                <p>{tile.description}</p>
-                <div className="tile-meta">
-                  <span>Category: {categories.find(c => c.id === tile.category)?.name}</span>
-                  <span>{tile.featured ? 'Featured' : 'Not Featured'}</span>
+              <div key={tile.id} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                <div className="h-48 overflow-hidden relative">
+                  <img 
+                    src={`http://localhost:8000${tile.image}`} 
+                    alt={tile.title} 
+                    className="w-full h-full object-cover"
+                  />
+                  {tile.featured && (
+                    <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-800 p-1 rounded-full">
+                      <Star size={16} />
+                    </div>
+                  )}
                 </div>
-                <div className="tile-actions">
-                  <button onClick={() => handleEdit(tile)} className="edit-button">
-                    Edit
-                  </button>
-                  <button onClick={() => handleDelete(tile.id)} className="delete-button">
-                    Delete
-                  </button>
+                <div className="p-4">
+                  <h3 className="font-semibold text-lg mb-1 truncate">{tile.title}</h3>
+                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">{tile.description}</p>
+                  <div className="flex items-center justify-between">
+                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                      {categories.find(c => c.id === tile.category)?.name || 'Uncategorized'}
+                    </span>
+                    <div className="flex space-x-1">
+                      <button 
+                        onClick={() => handleEdit(tile)} 
+                        className="p-1 text-blue-600 hover:text-blue-800 transition-colors"
+                        title="Edit"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(tile.id)} 
+                        className="p-1 text-red-600 hover:text-red-800 transition-colors"
+                        title="Delete"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))
@@ -273,4 +425,3 @@ const TileManager = () => {
 };
 
 export default TileManager;
-
