@@ -1,4 +1,4 @@
-// Fix for the ProtectedRoute component in App.tsx
+// Updated App.tsx to include both Tile and Project detail routes
 
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect, JSX } from 'react';
@@ -7,10 +7,12 @@ import Footer from './components/Footer';
 import Home from './pages/home';
 import Dashboard from './components/Dashboard';
 import Login from './admin/Login';
+import TileDetail from './pages/TileDetail'; // Import the TileDetail component
+import ProjectDetail from './pages/ProjectDetail'; // Import the ProjectDetail component
 import { isAuthenticated } from './services/auth';
 import './App.css';
 
-// Updated Protected route component with improved auth state management
+// Protected route component with improved auth state management
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   // Force re-evaluation of auth status with a state
   const [isAuth, setIsAuth] = useState<boolean>(false);
@@ -57,7 +59,7 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return children;
 };
 
-// Updated Public route component with improved auth state management
+// Public route component with improved auth state management
 const PublicOnlyRoute = ({ children }: { children: JSX.Element }) => {
   // Force re-evaluation of auth status with a state
   const [isAuth, setIsAuth] = useState<boolean>(false);
@@ -134,6 +136,60 @@ function App() {
               <Navbar />
               <main className="min-h-screen bg-gray-50">
                 <Home />
+              </main>
+              <Footer />
+            </>
+          }
+        />
+        
+        {/* Tile Detail Routes */}
+        <Route
+          path="/tiles/:id"
+          element={
+            <>
+              <Navbar />
+              <main className="min-h-screen bg-gray-50">
+                <TileDetail />
+              </main>
+              <Footer />
+            </>
+          }
+        />
+        
+        <Route
+          path="/tiles/slug/:slug"
+          element={
+            <>
+              <Navbar />
+              <main className="min-h-screen bg-gray-50">
+                <TileDetail />
+              </main>
+              <Footer />
+            </>
+          }
+        />
+        
+        {/* Project Detail Routes */}
+        <Route
+          path="/projects/:id"
+          element={
+            <>
+              <Navbar />
+              <main className="min-h-screen bg-gray-50">
+                <ProjectDetail />
+              </main>
+              <Footer />
+            </>
+          }
+        />
+        
+        <Route
+          path="/projects/slug/:slug"
+          element={
+            <>
+              <Navbar />
+              <main className="min-h-screen bg-gray-50">
+                <ProjectDetail />
               </main>
               <Footer />
             </>

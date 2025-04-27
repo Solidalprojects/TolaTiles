@@ -18,8 +18,27 @@ const Home = () => {
         setLoading(true);
         setError(null);
         
-        // Fetch featured tiles
-        const tilesData = await tileService.getTiles({ featured: true });
+        // Fetch tiles (try getting all tiles first if featured doesn't work)
+        let tilesData;
+        try {
+          // Try with featured filter first
+          tilesData = await tileService.getTiles({ featured: true });
+          console.log('Featured tiles loaded:', tilesData);
+          
+          // If no featured tiles found, fetch all tiles as a fallback
+          if (!tilesData || tilesData.length === 0) {
+            console.log('No featured tiles found, fetching all tiles');
+            tilesData = await tileService.getTiles();
+            // Just take the first 4 tiles for display
+            tilesData = tilesData.slice(0, 4);
+          }
+        } catch (error) {
+          console.error('Error fetching featured tiles, trying all tiles:', error);
+          tilesData = await tileService.getTiles();
+          // Just take the first 4 tiles for display
+          tilesData = tilesData.slice(0, 4);
+        }
+        
         setFeaturedTiles(tilesData);
         
         // Fetch categories
@@ -27,7 +46,23 @@ const Home = () => {
         setCategories(categoriesData);
         
         // Fetch featured projects
-        const projectsData = await projectService.getProjects({ featured: true });
+        let projectsData;
+        try {
+          projectsData = await projectService.getProjects({ featured: true });
+          
+          // If no featured projects, fetch all
+          if (!projectsData || projectsData.length === 0) {
+            projectsData = await projectService.getProjects();
+            // Just take the first 2 projects for display
+            projectsData = projectsData.slice(0, 2);
+          }
+        } catch (error) {
+          console.error('Error fetching featured projects, trying all projects:', error);
+          projectsData = await projectService.getProjects();
+          // Just take the first 2 projects for display
+          projectsData = projectsData.slice(0, 2);
+        }
+        
         setFeaturedProjects(projectsData);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -42,8 +77,44 @@ const Home = () => {
 
   // Format date helper
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    if (!dateString) return 'N/A';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    } catch (error) {
+      return dateString || 'N/A';
+    }
+  };
+
+  // Helper function to safely format price
+  const formatPrice = (price?: number | string | null) => {
+    if (price === undefined || price === null) {
+      return 'Price upon request';
+    }
+    
+    // Convert string to number if needed
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    
+    // Check if it's a valid number after conversion
+    if (typeof numPrice === 'number' && !isNaN(numPrice)) {
+      return `$${numPrice.toFixed(2)}`;
+    }
+    
+    // Fallback for any other case
+    return typeof price === 'string' ? price : 'Price upon request';
+  };
+
+  // Debug function to check tile data
+  const debugTileData = (tile: Tile) => {
+    console.log('Tile data:', {
+      id: tile.id,
+      title: tile.title,
+      primaryImage: tile.primary_image,
+      category: tile.category,
+      price: tile.price,
+      priceType: typeof tile.price,
+      formattedImage: tile.primary_image ? formatImageUrl(tile.primary_image) : 'No image'
+    });
   };
 
   return (
@@ -96,39 +167,66 @@ const Home = () => {
               <p>{error}</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {featuredTiles.length > 0 ? (
-                featuredTiles.map((tile) => (
-                  <div key={tile.id} className="bg-gray-50 rounded-lg overflow-hidden shadow-md">
-                    {tile.primary_image ? (
-                      <img 
-                        src={tile.primary_image}
-                        alt={tile.title}
-                        className="w-full h-48 object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-500">No image available</span>
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <h3 className="text-xl font-semibold mb-2">{tile.title}</h3>
-                      <p className="text-gray-600 mb-4">{tile.description}</p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-500">
-                          {categories.find(c => c.id === tile.category)?.name}
-                        </span>
-                        {tile.price && (
-                          <span className="font-medium">${tile.price}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="col-span-full text-center text-gray-500">No featured tiles found.</p>
+            <>
+              {/* Debug info - will only show during development */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="mb-4 p-2 bg-gray-100 text-xs">
+                  <p>Total tiles: {featuredTiles.length}</p>
+                </div>
               )}
-            </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                {featuredTiles.length > 0 ? (
+                  featuredTiles.map((tile) => {
+                    // For debugging
+                    if (process.env.NODE_ENV === 'development') {
+                      debugTileData(tile);
+                    }
+                    
+                    return (
+                      <Link 
+                        key={tile.id} 
+                        to={`/tiles/${tile.id}`} 
+                        className="bg-gray-50 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all transform hover:-translate-y-1"
+                      >
+                        <div className="relative">
+                          {tile.primary_image ? (
+                            <img 
+                              src={formatImageUrl(tile.primary_image)}
+                              alt={tile.title}
+                              className="w-full h-48 object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                              <span className="text-gray-500">No image available</span>
+                            </div>
+                          )}
+                          {tile.featured && (
+                            <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
+                              Featured
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <h3 className="text-xl font-semibold mb-2">{tile.title}</h3>
+                          <p className="text-gray-600 mb-4 line-clamp-2">{tile.description || "No description available"}</p>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-500">
+                              {categories.find(c => c.id === tile.category)?.name || 'Uncategorized'}
+                            </span>
+                            <span className="font-medium">
+                              {formatPrice(tile.price)}
+                            </span>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  })
+                ) : (
+                  <p className="col-span-full text-center text-gray-500">No tiles found. Please add some from the admin dashboard.</p>
+                )}
+              </div>
+            </>
           )}
         </div>
       </section>
@@ -150,18 +248,21 @@ const Home = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {categories.length > 0 ? (
                 categories.map((category) => (
-                  <div key={category.id} className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition">
+                  <div key={category.id} className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all transform hover:-translate-y-1">
                     <div className="p-6">
                       <h3 className="text-xl font-semibold mb-2">{category.name}</h3>
-                      <p className="text-gray-600 mb-4">{category.description}</p>
-                      <Link to={`/categories/${category.slug}`} className="text-blue-600 font-medium hover:text-blue-800">
-                        View Tiles →
+                      <p className="text-gray-600 mb-4 line-clamp-3">{category.description || 'No description available'}</p>
+                      <Link to={`/categories/${category.slug || category.id}`} className="text-blue-600 font-medium hover:text-blue-800 flex items-center">
+                        View Tiles 
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
                       </Link>
                     </div>
                   </div>
                 ))
               ) : (
-                <p className="col-span-full text-center text-gray-500">No categories found.</p>
+                <p className="col-span-full text-center text-gray-500">No categories found. Please add some from the admin dashboard.</p>
               )}
             </div>
           )}
@@ -185,38 +286,52 @@ const Home = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               {featuredProjects.length > 0 ? (
                 featuredProjects.map((project) => (
-                  <div key={project.id} className="bg-gray-50 rounded-lg overflow-hidden shadow-md">
-                    {project.primary_image ? (
-                      <img 
-                        src={project.primary_image}
-                        alt={project.title}
-                        className="w-full h-64 object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-64 bg-gray-200 flex items-center justify-center">
-                        <span className="text-gray-500">No image available</span>
-                      </div>
-                    )}
+                  <Link
+                    key={project.id}
+                    to={`/projects/${project.id}`}
+                    className="bg-gray-50 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all transform hover:-translate-y-1"
+                  >
+                    <div className="relative">
+                      {project.primary_image ? (
+                        <img 
+                          src={formatImageUrl(project.primary_image)}
+                          alt={project.title}
+                          className="w-full h-64 object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-64 bg-gray-200 flex items-center justify-center">
+                          <span className="text-gray-500">No image available</span>
+                        </div>
+                      )}
+                      {project.featured && (
+                        <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-800 text-xs font-semibold px-2 py-1 rounded-full">
+                          Featured
+                        </div>
+                      )}
+                    </div>
                     <div className="p-6">
                       <h3 className="text-2xl font-semibold mb-2">{project.title}</h3>
                       <div className="mb-4">
-                        <p className="text-gray-600"><strong>Client:</strong> {project.client}</p>
-                        <p className="text-gray-600"><strong>Location:</strong> {project.location}</p>
+                        <p className="text-gray-600"><strong>Client:</strong> {project.client || 'N/A'}</p>
+                        <p className="text-gray-600"><strong>Location:</strong> {project.location || 'N/A'}</p>
                         <p className="text-gray-600"><strong>Completed:</strong> {formatDate(project.completed_date)}</p>
                       </div>
-                      <p className="text-gray-700 mb-4">
-                        {project.description.length > 150
-                          ? `${project.description.substring(0, 150)}...`
-                          : project.description}
+                      <p className="text-gray-700 mb-4 line-clamp-3">
+                        {project.description || 'No description available'}
                       </p>
-                      <Link to={`/projects/${project.slug}`} className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition">
-                        View Project Details
-                      </Link>
+                      <div className="flex justify-end">
+                        <span className="inline-flex items-center text-blue-600 font-medium">
+                          View Project Details
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 ))
               ) : (
-                <p className="col-span-full text-center text-gray-500">No featured projects found.</p>
+                <p className="col-span-full text-center text-gray-500">No featured projects found. Please add some from the admin dashboard.</p>
               )}
             </div>
           )}
