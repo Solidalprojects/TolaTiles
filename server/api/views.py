@@ -204,6 +204,32 @@ class TileCategoryViewSet(viewsets.ModelViewSet):
             return TileCategoryDetailSerializer
         return TileCategorySerializer
     
+    def get_object(self):
+        """
+        Custom get_object method to support both ID and slug lookups
+        """
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        
+        assert lookup_url_kwarg in self.kwargs, (
+            'Expected view %s to be called with a URL keyword argument '
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            'attribute on the view correctly.' %
+            (self.__class__.__name__, lookup_url_kwarg)
+        )
+        
+        lookup_value = self.kwargs[lookup_url_kwarg]
+        
+        # Try to look up by ID first
+        if lookup_value.isdigit():
+            filter_kwargs = {'id': lookup_value}
+        else:
+            # Fall back to slug lookup
+            filter_kwargs = {self.lookup_field: lookup_value}
+        
+        obj = get_object_or_404(self.get_queryset(), **filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
+    
     def get_queryset(self):
         queryset = TileCategory.objects.all()
         
@@ -282,6 +308,32 @@ class TileViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return TileDetailSerializer
         return TileSerializer
+    
+    def get_object(self):
+        """
+        Custom get_object method to support both ID and slug lookups
+        """
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        
+        assert lookup_url_kwarg in self.kwargs, (
+            'Expected view %s to be called with a URL keyword argument '
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            'attribute on the view correctly.' %
+            (self.__class__.__name__, lookup_url_kwarg)
+        )
+        
+        lookup_value = self.kwargs[lookup_url_kwarg]
+        
+        # Try to look up by ID first
+        if lookup_value.isdigit():
+            filter_kwargs = {'id': lookup_value}
+        else:
+            # Fall back to slug lookup
+            filter_kwargs = {self.lookup_field: lookup_value}
+        
+        obj = get_object_or_404(self.get_queryset(), **filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
     
     def get_queryset(self):
         queryset = Tile.objects.all()
@@ -394,6 +446,7 @@ class TileViewSet(viewsets.ModelViewSet):
             instance._prefetched_objects_cache = {}
         
         return Response(serializer.data)
+
 class ProjectViewSet(viewsets.ModelViewSet):
     """
     ViewSet for viewing and editing Projects.
@@ -410,6 +463,32 @@ class ProjectViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return ProjectDetailSerializer
         return ProjectSerializer
+    
+    def get_object(self):
+        """
+        Custom get_object method to support both ID and slug lookups
+        """
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        
+        assert lookup_url_kwarg in self.kwargs, (
+            'Expected view %s to be called with a URL keyword argument '
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            'attribute on the view correctly.' %
+            (self.__class__.__name__, lookup_url_kwarg)
+        )
+        
+        lookup_value = self.kwargs[lookup_url_kwarg]
+        
+        # Try to look up by ID first
+        if lookup_value.isdigit():
+            filter_kwargs = {'id': lookup_value}
+        else:
+            # Fall back to slug lookup
+            filter_kwargs = {self.lookup_field: lookup_value}
+        
+        obj = get_object_or_404(self.get_queryset(), **filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
     
     def get_queryset(self):
         queryset = Project.objects.all()
@@ -440,6 +519,76 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         return context
+        
+    def create(self, request, *args, **kwargs):
+        """Custom create method to handle project and its images"""
+        # Handle the project data first
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        project = serializer.save()
+        
+        # Process images if available
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            is_primary = request.data.get('primary_image', 0)
+            
+            # Convert is_primary to int if it's a string
+            try:
+                is_primary = int(is_primary)
+            except (ValueError, TypeError):
+                is_primary = 0
+            
+            for i, image_file in enumerate(images):
+                caption = request.data.get(f'caption_{i}', '')
+                
+                # Create project image with correct project reference
+                ProjectImage.objects.create(
+                    project=project,
+                    image=image_file,
+                    caption=caption,
+                    is_primary=(i == is_primary)
+                )
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        
+    def update(self, request, *args, **kwargs):
+        """Custom update method to handle images"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        # Process new images if available
+        if 'images' in request.FILES:
+            images = request.FILES.getlist('images')
+            is_primary = request.data.get('primary_image', None)
+            
+            # Convert is_primary to int if it's a string
+            try:
+                is_primary = int(is_primary) if is_primary is not None else None
+            except (ValueError, TypeError):
+                is_primary = None
+            
+            for i, image_file in enumerate(images):
+                caption = request.data.get(f'caption_{i}', '')
+                
+                # Create project image
+                ProjectImage.objects.create(
+                    project=instance,
+                    image=image_file,
+                    caption=caption,
+                    is_primary=(is_primary is not None and i == is_primary)
+                )
+        
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+        
+        return Response(serializer.data)
 
 class ProjectImageViewSet(viewsets.ModelViewSet):
     """
@@ -468,6 +617,20 @@ class ProjectImageViewSet(viewsets.ModelViewSet):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         return context
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def set_as_primary(self, request, pk=None):
+        """Set this image as primary for its parent project"""
+        image = self.get_object()
+        
+        # Set this image as primary
+        image.is_primary = True
+        image.save()
+        
+        # Ensure no other images for this project are primary
+        ProjectImage.objects.filter(project=image.project, is_primary=True).exclude(id=image.id).update(is_primary=False)
+        
+        return Response({'status': 'set as primary image'})
 
 class ContactViewSet(viewsets.ModelViewSet):
     """

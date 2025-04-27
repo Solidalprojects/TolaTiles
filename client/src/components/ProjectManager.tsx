@@ -1,4 +1,5 @@
 // client/src/components/ProjectManager.tsx
+// client/src/components/ProjectManager.tsx
 import { useState, useEffect } from 'react';
 import { Project, ProjectImage } from '../types/types';
 import { projectService } from '../services/api';
@@ -87,54 +88,48 @@ const ProjectManager = () => {
       
       let projectId: number;
       
+      // Upload images directly with the project
+      if (projectImages.length > 0) {
+        // Add images to the project formData
+        projectImages.forEach((file, index) => {
+          formData.append('images', file);
+          
+          // Add captions if available
+          if (imageCaptions[index]) {
+            formData.append(`caption_${index}`, imageCaptions[index]);
+          }
+        });
+        
+        // Set primary image index
+        formData.append('primary_image', '0'); // Set first image as primary by default
+      }
+      
       if (editingProject) {
         // Update existing project
         const updatedProject = await projectService.updateProject(editingProject.id, formData);
         projectId = updatedProject.id;
       } else {
-        // Create new project
+        // Create new project with images in a single request
         const createdProject = await projectService.createProject(formData);
         projectId = createdProject.id;
       }
       
-      // Upload images if any
-      if (projectImages.length > 0) {
-        const token = getStoredAuth().token;
-        
-        for (let i = 0; i < projectImages.length; i++) {
-          const imageFormData = new FormData();
-          imageFormData.append('project', projectId.toString());
-          imageFormData.append('image', projectImages[i]);
-          
-          if (imageCaptions[i]) {
-            imageFormData.append('caption', imageCaptions[i]);
-          }
-          
-          // Set the first image as primary
-          if (i === 0) {
-            imageFormData.append('is_primary', 'true');
-          }
-          
-          try {
-            // Use the project images endpoint from API_ENDPOINTS
-            await fetch(API_ENDPOINTS.PROJECTS.IMAGES, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Token ${token}`
-              },
-              body: imageFormData
-            });
-          } catch (imageError) {
-            console.error('Error uploading image:', imageError);
-          }
+      await fetchProjects();
+      resetForm();
+    } catch (err: any) {
+      console.error('Error saving project:', err);
+      let errorMessage = 'Failed to save project. Please try again later.';
+      
+      // Enhanced error handling
+      if (err.message) {
+        if (err.message.includes('401')) {
+          errorMessage = 'Authentication error. Please try logging in again.';
+        } else if (err.message.includes('Network Error')) {
+          errorMessage = 'Network error. Please check your connection.';
         }
       }
       
-      await fetchProjects();
-      resetForm();
-    } catch (err) {
-      console.error('Error saving project:', err);
-      setError('Failed to save project. Please try again later.');
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -193,6 +188,7 @@ const ProjectManager = () => {
       return dateString;
     }
   };
+
 
   return (
     <div className="p-6">
