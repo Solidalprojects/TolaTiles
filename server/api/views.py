@@ -10,11 +10,18 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from .models import TileCategory, TileImage, Project, ProjectImage, Contact, Subscriber, Tile
+from .models import (
+    TileCategory, TileImage, Project, ProjectImage, 
+    Contact, Subscriber, Tile, ProductType, 
+    TeamMember, CustomerTestimonial
+)
 from .serializers import (
     UserSerializer, TileCategorySerializer, TileCategoryDetailSerializer,
     TileImageSerializer, ProjectSerializer, ProjectDetailSerializer,
-    ProjectImageSerializer, ContactSerializer, SubscriberSerializer, TileSerializer, TileDetailSerializer
+    ProjectImageSerializer, ContactSerializer, SubscriberSerializer, 
+    TileSerializer, TileDetailSerializer, ProductTypeSerializer,
+    ProductTypeDetailSerializer, TeamMemberSerializer,
+    CustomerTestimonialSerializer
 )
 import logging
 
@@ -187,6 +194,178 @@ def change_password(request):
     
     return Response(response_data)
 
+class ProductTypeViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for viewing and editing Product Types (Backsplash, Fireplace, etc.)
+    """
+    queryset = ProductType.objects.all()
+    serializer_class = ProductTypeSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    lookup_field = 'slug'
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'display_order', 'created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ProductTypeDetailSerializer
+        return ProductTypeSerializer
+    
+    def get_object(self):
+        """
+        Custom get_object method to support both ID and slug lookups
+        """
+        lookup_url_kwarg = self.lookup_url_kwarg or self.lookup_field
+        
+        assert lookup_url_kwarg in self.kwargs, (
+            'Expected view %s to be called with a URL keyword argument '
+            'named "%s". Fix your URL conf, or set the `.lookup_field` '
+            'attribute on the view correctly.' %
+            (self.__class__.__name__, lookup_url_kwarg)
+        )
+        
+        lookup_value = self.kwargs[lookup_url_kwarg]
+        
+        # Try to look up by ID first
+        if lookup_value.isdigit():
+            filter_kwargs = {'id': lookup_value}
+        else:
+            # Fall back to slug lookup
+            filter_kwargs = {self.lookup_field: lookup_value}
+        
+        obj = get_object_or_404(self.get_queryset(), **filter_kwargs)
+        self.check_object_permissions(self.request, obj)
+        return obj
+    
+    def get_queryset(self):
+        queryset = ProductType.objects.all()
+        
+        # Filter by active status if specified
+        active = self.request.query_params.get('active')
+        if active is not None:
+            is_active = active.lower() == 'true'
+            queryset = queryset.filter(active=is_active)
+        
+        return queryset.order_by('display_order', 'name')
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        return context
+
+class TeamMemberViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for viewing and editing Team Members.
+    """
+    queryset = TeamMember.objects.all()
+    serializer_class = TeamMemberSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'position', 'bio']
+    ordering_fields = ['display_order', 'name', 'position']
+    
+    def get_queryset(self):
+        queryset = TeamMember.objects.all()
+        
+        # Filter by active status if specified
+        active = self.request.query_params.get('active')
+        if active is not None:
+            is_active = active.lower() == 'true'
+            queryset = queryset.filter(active=is_active)
+        
+        # Filter by position if specified
+        position = self.request.query_params.get('position')
+        if position:
+            queryset = queryset.filter(position__icontains=position)
+        
+        return queryset.order_by('display_order', 'name')
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        return context
+
+class CustomerTestimonialViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for viewing and editing Customer Testimonials.
+    """
+    queryset = CustomerTestimonial.objects.all()
+    serializer_class = CustomerTestimonialSerializer
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['customer_name', 'location', 'testimonial']
+    ordering_fields = ['date', 'rating']
+    
+    def get_permissions(self):
+        if self.action in ['create', 'list', 'retrieve']:
+            permission_classes = [AllowAny]
+        else:
+            permission_classes = [IsAdminUser]
+        return [permission() for permission in permission_classes]
+    
+    def get_queryset(self):
+        queryset = CustomerTestimonial.objects.all()
+        
+        # By default, only show approved testimonials to non-admin users
+        if not self.request.user.is_staff:
+            queryset = queryset.filter(approved=True)
+        
+        # Filter by approval status if specified (admin only)
+        if self.request.user.is_staff:
+            approved = self.request.query_params.get('approved')
+            if approved is not None:
+                is_approved = approved.lower() == 'true'
+                queryset = queryset.filter(approved=is_approved)
+        
+        # Filter by project if specified
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        
+        # Filter by rating if specified
+        rating = self.request.query_params.get('rating')
+        if rating and rating.isdigit():
+            queryset = queryset.filter(rating=int(rating))
+        
+        # Filter by minimum rating if specified
+        min_rating = self.request.query_params.get('min_rating')
+        if min_rating and min_rating.isdigit():
+            queryset = queryset.filter(rating__gte=int(min_rating))
+        
+        return queryset.order_by('-date')
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        return context
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def approve(self, request, pk=None):
+        """Approve or unapprove a testimonial"""
+        testimonial = self.get_object()
+        
+        # Toggle the approved status
+        testimonial.approved = not testimonial.approved
+        testimonial.save()
+        
+        status_msg = 'approved' if testimonial.approved else 'unapproved'
+        return Response({'status': f'Testimonial has been {status_msg}'})
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Set approved to False by default for user-submitted testimonials
+        testimonial = serializer.save(approved=False)
+        
+        # Admin-submitted testimonials can be automatically approved
+        if request.user.is_staff and request.data.get('approved'):
+            testimonial.approved = True
+            testimonial.save()
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            serializer.data, 
+            status=status.HTTP_201_CREATED, 
+            headers=headers
+        )
+
 class TileCategoryViewSet(viewsets.ModelViewSet):
     """
     ViewSet for viewing and editing Tile Categories.
@@ -337,6 +516,15 @@ class TileViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         queryset = Tile.objects.all()
+        
+        # Filter by product type
+        product_type = self.request.query_params.get('product_type')
+        if product_type:
+            # Support both id and slug lookup
+            if product_type.isdigit():
+                queryset = queryset.filter(product_type_id=product_type)
+            else:
+                queryset = queryset.filter(product_type__slug=product_type)
         
         # Filter by category
         category = self.request.query_params.get('category')

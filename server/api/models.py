@@ -4,6 +4,35 @@ from django.contrib.auth.models import User
 from django.utils.text import slugify
 import uuid
 
+class ProductType(models.Model):
+    name = models.CharField(max_length=100)  # Backsplash, Fireplace, etc.
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
+    description = models.TextField(blank=True, null=True)
+    image = models.ImageField(upload_to='product_types/', blank=True, null=True)
+    display_order = models.IntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Product Type'
+        verbose_name_plural = 'Product Types'
+        ordering = ['display_order', 'name']
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return self.name
+    
+    @property
+    def image_url(self):
+        if self.image:
+            return self.image.url
+        return None
+
 class TileCategory(models.Model):
     name = models.CharField(max_length=100)
     slug = models.SlugField(max_length=120, unique=True, blank=True)
@@ -38,6 +67,7 @@ class Tile(models.Model):
     slug = models.SlugField(max_length=220, unique=True, blank=True)
     description = models.TextField(blank=True, null=True)
     category = models.ForeignKey(TileCategory, related_name='tiles', on_delete=models.CASCADE)
+    product_type = models.ForeignKey(ProductType, related_name='tiles', on_delete=models.SET_NULL, null=True, blank=True)
     featured = models.BooleanField(default=False)
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     size = models.CharField(max_length=100, blank=True, null=True)
@@ -85,6 +115,32 @@ class TileImage(models.Model):
             TileImage.objects.filter(tile=self.tile, is_primary=True).exclude(id=self.id).update(is_primary=False)
         super().save(*args, **kwargs)
 
+class TeamMember(models.Model):
+    name = models.CharField(max_length=100)
+    position = models.CharField(max_length=100)
+    bio = models.TextField()
+    image = models.ImageField(upload_to='team/')
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    display_order = models.IntegerField(default=0)
+    active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Team Member'
+        verbose_name_plural = 'Team Members'
+        ordering = ['display_order', 'name']
+    
+    def __str__(self):
+        return self.name
+    
+    @property
+    def image_url(self):
+        if self.image:
+            return self.image.url
+        return None
+
 class Project(models.Model):
     PROGRESS_CHOICES = (
         ('planning', 'Planning'),
@@ -101,6 +157,7 @@ class Project(models.Model):
     status = models.CharField(max_length=20, choices=PROGRESS_CHOICES, default='completed')
     featured = models.BooleanField(default=False)
     tiles_used = models.ManyToManyField(Tile, related_name='projects', blank=True)
+    product_type = models.ForeignKey(ProductType, related_name='projects', on_delete=models.SET_NULL, null=True, blank=True)
     area_size = models.CharField(max_length=100, blank=True, null=True)
     testimonial = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -118,6 +175,27 @@ class Project(models.Model):
     
     def __str__(self):
         return self.title
+
+class CustomerTestimonial(models.Model):
+    RATING_CHOICES = [(1, '1 Star'), (2, '2 Stars'), (3, '3 Stars'), (4, '4 Stars'), (5, '5 Stars')]
+    
+    customer_name = models.CharField(max_length=100)
+    location = models.CharField(max_length=100, blank=True, null=True)
+    testimonial = models.TextField()
+    project = models.ForeignKey(Project, related_name='testimonials', on_delete=models.SET_NULL, null=True, blank=True)
+    rating = models.IntegerField(choices=RATING_CHOICES, default=5)
+    date = models.DateField(auto_now_add=True)
+    approved = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Customer Testimonial'
+        verbose_name_plural = 'Customer Testimonials'
+        ordering = ['-date']
+    
+    def __str__(self):
+        return f"Testimonial by {self.customer_name}"
 
 class ProjectImage(models.Model):
     project = models.ForeignKey(Project, related_name='images', on_delete=models.CASCADE)

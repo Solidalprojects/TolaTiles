@@ -1,0 +1,115 @@
+2. Frontend Structure
+Navigation Menu
+
+Home
+Products
+
+Tiles
+Backsplashes
+Fireplaces
+Flooring
+Patios
+Showers
+
+
+Projects
+Team
+Testimonials
+Contact
+
+Home Page Sections
+
+Hero Banner with rotating featured products
+Product Type Categories (clickable cards)
+Featured Projects carousel
+Customer Testimonials slider
+About Us summary
+Call to Action for consultation
+
+Products Page
+
+Filter by:
+
+Product type (backsplash, fireplace, etc.)
+Category (your existing categories)
+Material
+Price range
+In-stock availability
+
+
+Grid view with sort options
+Quick view functionality
+
+Project Detail Pages
+
+Project photos gallery
+Project description
+Location and completion date
+Products used (with links)
+Customer testimonial (if available)
+Related projects
+
+Team Page
+
+Team member cards with:
+
+Photo
+Name and position
+Short bio
+Specialization
+Contact information
+
+
+
+Testimonials Page
+
+Filterable testimonials
+Rating system display
+Photos of completed projects
+Form to submit new testimonials
+
+Contact Page
+
+Contact form
+Map with location
+Business hours
+Direct phone and email
+
+3. API Enhancements
+Add these endpoints to your existing API:
+/api/product-types/
+/api/team/
+/api/testimonials/
+/api/tiles/?product_type=<id>
+4. Admin Dashboard Enhancements
+Add these sections to your admin dashboard:
+
+Product Type Management
+Team Member Management
+Testimonial Management
+Enhanced Analytics
+
+5. Implementation Priorities
+
+Phase 1: Backend models and migrations
+Phase 2: API endpoints and serializers
+Phase 3: Admin dashboard updates
+Phase 4: Frontend page templates
+Phase 5: User experience improvements (filtering, search)
+
+6. Database Migration Strategy
+
+Create the new models without breaking changes
+Add the product_type field to Tile with null=True
+Run migrations
+Populate data for new tables
+Update existing tiles with appropriate product types
+
+7. Future Considerations
+
+Online Scheduling: Allow customers to book consultations
+Product Inventory Management: Track stock levels
+Customer Portal: For project tracking and communication
+Image Gallery: Enhanced product visualization
+Project Calculator: Help customers estimate materials needed
+
