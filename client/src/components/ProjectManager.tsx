@@ -1,8 +1,9 @@
-// client/src/components/ProjectManager.tsx
+// client/src/components/ProjectManager.tsx - updated version with image fixes
 import { useState, useEffect } from 'react';
 import { Project, ProjectImage } from '../types/types';
 import { projectService } from '../services/api';
-import { AlertCircle, Loader, Plus, X, Edit, Trash2 } from 'lucide-react';
+import { AlertCircle, Loader, Plus, X, Edit, Trash2, Camera } from 'lucide-react';
+import { formatImageUrl } from '../utils/imageUtils';
 
 const ProjectManager = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -29,7 +30,9 @@ const ProjectManager = () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching projects...');
       const data = await projectService.getProjects();
+      console.log('Projects fetched successfully:', data);
       setProjects(data);
     } catch (err) {
       console.error('Error fetching projects:', err);
@@ -99,7 +102,7 @@ const ProjectManager = () => {
           imageFormData.append('image', projectImages[i]);
           imageFormData.append('caption', imageCaptions[i] || '');
           
-          // Use axios to upload image
+          // Use token from localStorage for authorization
           await fetch(`http://localhost:8000/api/project-images/`, {
             method: 'POST',
             headers: {
@@ -347,15 +350,19 @@ const ProjectManager = () => {
           ) : (
             projects.map((project) => (
               <div key={project.id} className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow overflow-hidden">
-                {project.primary_image && (
-                  <div className="h-48 overflow-hidden">
+                <div className="h-48 overflow-hidden relative">
+                  {project.primary_image ? (
                     <img 
-                      src={project.primary_image} 
+                      src={formatImageUrl(project.primary_image)}
                       alt={project.title} 
                       className="w-full h-full object-cover"
                     />
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex items-center justify-center h-full bg-gray-100">
+                      <Camera size={32} className="text-gray-400" />
+                    </div>
+                  )}
+                </div>
                 <div className="p-4">
                   <h3 className="text-xl font-semibold mb-2">{project.title}</h3>
                   <div className="mb-3 text-sm">

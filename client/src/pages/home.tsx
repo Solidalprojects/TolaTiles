@@ -88,7 +88,7 @@ const Home = () => {
                 featuredTiles.map((tile) => (
                   <div key={tile.id} className="bg-gray-50 rounded-lg overflow-hidden shadow-md">
                     <img 
-                      src={`http://localhost:8000${tile.image}`} 
+                      src={`http://localhost:8000${tile.images}`} 
                       alt={tile.title}
                       className="w-full h-48 object-cover"
                     />
