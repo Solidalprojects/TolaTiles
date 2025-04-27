@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, isAuthenticated, isAdmin } from '../services/auth';
-import logo from '../assets/react.svg';
+import logo from '../assets/tolatiles.jpg';
 import { Menu, X, LogOut, User, ChevronDown, Home, Grid, Briefcase, Settings } from 'lucide-react';
 
 const Navbar = () => {

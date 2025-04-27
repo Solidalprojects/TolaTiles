@@ -33,13 +33,11 @@ class TileCategory(models.Model):
             return self.image.url
         return None
 
-class TileImage(models.Model):
+class Tile(models.Model):
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=220, unique=True, blank=True)
     description = models.TextField(blank=True, null=True)
-    image = models.ImageField(upload_to='tiles/')
-    thumbnail = models.ImageField(upload_to='tiles/thumbnails/', blank=True, null=True)
-    category = models.ForeignKey(TileCategory, related_name='images', on_delete=models.CASCADE)
+    category = models.ForeignKey(TileCategory, related_name='tiles', on_delete=models.CASCADE)
     featured = models.BooleanField(default=False)
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     size = models.CharField(max_length=100, blank=True, null=True)
@@ -64,6 +62,29 @@ class TileImage(models.Model):
     def __str__(self):
         return self.title
 
+
+class TileImage(models.Model):
+    tile = models.ForeignKey(Tile, related_name='images', on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='tiles/')
+    thumbnail = models.ImageField(upload_to='tiles/thumbnails/', blank=True, null=True)
+    caption = models.CharField(max_length=200, blank=True, null=True)
+    is_primary = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Tile Image'
+        verbose_name_plural = 'Tile Images'
+        ordering = ['-is_primary', 'created_at']
+    
+    def __str__(self):
+        return f"Image for {self.tile.title}"
+    
+    def save(self, *args, **kwargs):
+        # If this image is being set as primary, unset any existing primary
+        if self.is_primary:
+            TileImage.objects.filter(tile=self.tile, is_primary=True).exclude(id=self.id).update(is_primary=False)
+        super().save(*args, **kwargs)
+
 class Project(models.Model):
     PROGRESS_CHOICES = (
         ('planning', 'Planning'),
@@ -79,7 +100,7 @@ class Project(models.Model):
     completed_date = models.DateField()
     status = models.CharField(max_length=20, choices=PROGRESS_CHOICES, default='completed')
     featured = models.BooleanField(default=False)
-    tiles_used = models.ManyToManyField(TileImage, related_name='projects', blank=True)
+    tiles_used = models.ManyToManyField(Tile, related_name='projects', blank=True)
     area_size = models.CharField(max_length=100, blank=True, null=True)
     testimonial = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)

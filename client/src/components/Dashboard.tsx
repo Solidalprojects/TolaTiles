@@ -1,8 +1,10 @@
 // client/src/components/Dashboard.tsx
+// Updated Dashboard component with improved authentication handling
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, isAuthenticated, logout } from '../services/auth';
-import DashboardSidebar from './DasboardsSidebar';
+import DashboardSidebar from './DashboardSidebar';
 import TileManager from './TileManager';
 import CategoryManager from './CategoryManager';
 import ProjectManager from './ProjectManager';
@@ -16,19 +18,29 @@ const Dashboard = () => {
   
   useEffect(() => {
     // Check if user is logged in
-    if (!isAuthenticated()) {
-      navigate('/auth/login');
-      return;
-    }
+    const checkAuthentication = () => {
+      const authenticated = isAuthenticated();
+      console.log("Dashboard auth check:", authenticated);
+      
+      if (!authenticated) {
+        console.log("Dashboard - Not authenticated, redirecting to login");
+        navigate('/auth/login', { replace: true });
+        return;
+      }
+      
+      const userData = getCurrentUser();
+      console.log("Dashboard - User data:", userData?.user ? "Found" : "Not found");
+      setUser(userData?.user || null);
+      setLoading(false);
+    };
     
-    const userData = getCurrentUser();
-    setUser(userData?.user || null);
-    setLoading(false);
-
-    // Set up event listeners for page unload/navigation
+    checkAuthentication();
+    
+    // Don't remove session auth when component mounts
+    // Only set up event listeners for page unload/navigation
     const handleBeforeUnload = () => {
       // Clear session authentication when user leaves the page
-      sessionStorage.removeItem('sessionAuth');
+      // sessionStorage.removeItem('sessionAuth');  // Comment this out to prevent auth loss on refresh
     };
 
     // Listen for page unload
@@ -37,8 +49,8 @@ const Dashboard = () => {
     // Listen for navigation away from dashboard
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      // Also remove session auth when component unmounts
-      sessionStorage.removeItem('sessionAuth');
+      // Also comment this out to prevent auth loss when component unmounts
+      // sessionStorage.removeItem('sessionAuth');
     };
   }, [navigate]);
 

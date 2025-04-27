@@ -1,10 +1,10 @@
 // client/src/components/TileManager.tsx
 import { useState, useEffect } from 'react';
-import { Tile, Category } from '../types/types';
+import { Tile, Category, TileImage } from '../types/types';
 import { tileService, categoryService } from '../services/api';
 import { 
   AlertCircle, Loader, Plus, X, Edit, Trash2, 
-  Star, Image, Search, Filter 
+  Star, Image as ImageIcon, Search, Filter, Camera
 } from 'lucide-react';
 
 const TileManager = () => {
@@ -15,10 +15,19 @@ const TileManager = () => {
   const [newTile, setNewTile] = useState({
     title: '',
     description: '',
-    image: null as File | null,
     category: '',
     featured: false,
+    price: '',
+    size: '',
+    material: '',
+    in_stock: true,
   });
+  
+  // State for multiple images
+  const [tileImages, setTileImages] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+  const [primaryImageIndex, setPrimaryImageIndex] = useState<number>(0);
+  
   const [editingTile, setEditingTile] = useState<Tile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('');
@@ -75,15 +84,38 @@ const TileManager = () => {
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setNewTile({ ...newTile, [name]: checked });
+    } else if (type === 'number') {
+      setNewTile({ ...newTile, [name]: value });
     } else {
       setNewTile({ ...newTile, [name]: value });
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setNewTile({ ...newTile, image: e.target.files[0] });
+    if (e.target.files && e.target.files.length > 0) {
+      const fileArray = Array.from(e.target.files);
+      setTileImages(fileArray);
+      
+      // Generate previews
+      const newPreviews: string[] = [];
+      fileArray.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          newPreviews.push(reader.result as string);
+          if (newPreviews.length === fileArray.length) {
+            setImagePreviews([...newPreviews]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+      
+      // Set first image as primary by default
+      setPrimaryImageIndex(0);
     }
+  };
+
+  const handleSetPrimary = (index: number) => {
+    setPrimaryImageIndex(index);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,13 +126,22 @@ const TileManager = () => {
       setError(null);
       
       const formData = new FormData();
-      formData.append('title', newTile.title);
-      formData.append('description', newTile.description || '');
-      formData.append('category', newTile.category);
-      formData.append('featured', newTile.featured.toString());
       
-      if (newTile.image) {
-        formData.append('image', newTile.image);
+      // Add tile data
+      Object.entries(newTile).forEach(([key, value]) => {
+        if (value !== '') {
+          formData.append(key, value.toString());
+        }
+      });
+      
+      // Add images
+      tileImages.forEach((file, index) => {
+        formData.append('images', file);
+      });
+      
+      // Add primary image index
+      if (tileImages.length > 0) {
+        formData.append('primary_image', primaryImageIndex.toString());
       }
       
       if (editingTile) {
@@ -139,12 +180,20 @@ const TileManager = () => {
     setEditingTile(tile);
     setNewTile({
       title: tile.title,
-      description: tile.description,
-      image: null,
+      description: tile.description || '',
       category: tile.category.toString(),
       featured: tile.featured,
+      price: tile.price?.toString() || '',
+      size: tile.size || '',
+      material: tile.material || '',
+      in_stock: tile.in_stock,
     });
     setShowAddForm(true);
+    
+    // Reset image selection when editing
+    setTileImages([]);
+    setImagePreviews([]);
+    setPrimaryImageIndex(0);
   };
 
   const resetForm = () => {
@@ -153,10 +202,16 @@ const TileManager = () => {
     setNewTile({
       title: '',
       description: '',
-      image: null,
       category: '',
       featured: false,
+      price: '',
+      size: '',
+      material: '',
+      in_stock: true,
     });
+    setTileImages([]);
+    setImagePreviews([]);
+    setPrimaryImageIndex(0);
   };
 
   return (
@@ -229,7 +284,7 @@ const TileManager = () => {
             </div>
             <div>
               <label htmlFor="filterFeatured" className="block text-gray-700 mb-1 text-sm">Featured Status</label>
-              <select
+                              <select
                 id="filterFeatured"
                 value={filterFeatured === null ? '' : filterFeatured.toString()}
                 onChange={(e) => {
@@ -265,85 +320,208 @@ const TileManager = () => {
       {showAddForm && (
         <form onSubmit={handleSubmit} className="bg-gray-50 p-6 rounded-lg mb-6">
           <h3 className="text-xl font-semibold mb-4 text-gray-800">{editingTile ? 'Edit Tile' : 'Add New Tile'}</h3>
-          <div className="mb-4">
-            <label htmlFor="title" className="block text-gray-700 mb-2">Title</label>
-            <input
-              type="text"
-              id="title"
-              name="title"
-              value={newTile.title}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
+          
+          {/* Basic Information */}
+          <div className="mb-6">
+            <h4 className="text-lg font-medium mb-2 text-gray-700 border-b pb-1">Basic Information</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="title" className="block text-gray-700 mb-1">Title</label>
+                <input
+                  type="text"
+                  id="title"
+                  name="title"
+                  value={newTile.title}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label htmlFor="category" className="block text-gray-700 mb-1">Category</label>
+                <select
+                  id="category"
+                  name="category"
+                  value={newTile.category}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            
+            <div className="mt-4">
+              <label htmlFor="description" className="block text-gray-700 mb-1">Description</label>
+              <textarea
+                id="description"
+                name="description"
+                value={newTile.description}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={3}
+              />
+            </div>
           </div>
-          <div className="mb-4">
-            <label htmlFor="description" className="block text-gray-700 mb-2">Description</label>
-            <textarea
-              id="description"
-              name="description"
-              value={newTile.description || ''}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              rows={4}
-            />
+          
+          {/* Specifications */}
+          <div className="mb-6">
+            <h4 className="text-lg font-medium mb-2 text-gray-700 border-b pb-1">Specifications</h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label htmlFor="price" className="block text-gray-700 mb-1">Price</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  id="price"
+                  name="price"
+                  value={newTile.price}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Optional"
+                />
+              </div>
+              <div>
+                <label htmlFor="size" className="block text-gray-700 mb-1">Size</label>
+                <input
+                  type="text"
+                  id="size"
+                  name="size"
+                  value={newTile.size}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. 12x12, 24x48"
+                />
+              </div>
+              <div>
+                <label htmlFor="material" className="block text-gray-700 mb-1">Material</label>
+                <input
+                  type="text"
+                  id="material"
+                  name="material"
+                  value={newTile.material}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g. Porcelain, Ceramic"
+                />
+              </div>
+            </div>
+            
+            <div className="flex items-center mt-4">
+              <input
+                type="checkbox"
+                id="in_stock"
+                name="in_stock"
+                checked={newTile.in_stock}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="in_stock" className="ml-2 block text-gray-700">
+                In Stock
+              </label>
+            </div>
+            
+            <div className="flex items-center mt-2">
+              <input
+                type="checkbox"
+                id="featured"
+                name="featured"
+                checked={newTile.featured}
+                onChange={handleInputChange}
+                className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <label htmlFor="featured" className="ml-2 block text-gray-700">
+                Featured Tile
+              </label>
+            </div>
           </div>
-          <div className="mb-4">
-            <label htmlFor="category" className="block text-gray-700 mb-2">Category</label>
-            <select
-              id="category"
-              name="category"
-              value={newTile.category}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            >
-              <option value="">Select Category</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="mb-4">
-            <label htmlFor="image" className="block text-gray-700 mb-2">
-              {editingTile ? 'New Image (Leave empty to keep current)' : 'Image'}
-            </label>
-            <div className="flex items-center">
+          
+          {/* Images */}
+          <div className="mb-6">
+            <h4 className="text-lg font-medium mb-2 text-gray-700 border-b pb-1">Images</h4>
+            
+            <div className="mt-2">
+              <label htmlFor="images" className="block text-gray-700 mb-1">
+                {editingTile ? 'Add New Images (Leave empty to keep current images)' : 'Upload Images'}
+              </label>
               <input
                 type="file"
-                id="image"
-                name="image"
+                id="images"
+                name="images"
                 onChange={handleFileChange}
                 accept="image/*"
+                multiple
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 required={!editingTile}
               />
-              {editingTile && editingTile.image && (
-                <div className="ml-2">
-                  <img 
-                    src={`http://localhost:8000${editingTile.image}`}
-                    alt="Current tile image"
-                    className="h-12 w-12 object-cover rounded-md"
-                  />
-                </div>
-              )}
+              <p className="mt-1 text-sm text-gray-500">
+                You can select multiple images. The first image will be set as the primary image by default.
+              </p>
             </div>
+            
+            {/* Image Previews */}
+            {imagePreviews.length > 0 && (
+              <div className="mt-4">
+                <h5 className="text-sm font-medium mb-2 text-gray-700">Preview & Select Primary Image</h5>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {imagePreviews.map((preview, index) => (
+                    <div key={index} className={`relative rounded-md overflow-hidden border-2 ${index === primaryImageIndex ? 'border-blue-500' : 'border-gray-200'}`}>
+                      <img
+                        src={preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-32 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleSetPrimary(index)}
+                        className={`absolute bottom-2 right-2 p-1 rounded-full ${
+                          index === primaryImageIndex 
+                            ? 'bg-blue-500 text-white' 
+                            : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                        }`}
+                        title={index === primaryImageIndex ? 'Primary Image' : 'Set as Primary'}
+                      >
+                        <Star size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Existing Images (when editing) */}
+            {editingTile && editingTile.images && editingTile.images.length > 0 && (
+              <div className="mt-4">
+                <h5 className="text-sm font-medium mb-2 text-gray-700">Current Images</h5>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                  {editingTile.images.map((image, index) => (
+                    <div key={image.id} className={`relative rounded-md overflow-hidden border-2 ${image.is_primary ? 'border-blue-500' : 'border-gray-200'}`}>
+                      <img
+                        src={image.image_url}
+                        alt={image.caption || `Image ${index + 1}`}
+                        className="w-full h-32 object-cover"
+                      />
+                      {image.is_primary && (
+                        <div className="absolute bottom-2 right-2 p-1 rounded-full bg-blue-500 text-white">
+                          <Star size={16} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  These images will be kept. Upload new images above if you want to add more.
+                </p>
+              </div>
+            )}
           </div>
-          <div className="flex items-center mb-4">
-            <input
-              type="checkbox"
-              id="featured"
-              name="featured"
-              checked={newTile.featured}
-              onChange={handleInputChange}
-              className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="featured" className="ml-2 block text-gray-700">
-              Featured Tile
-            </label>
-          </div>
+          
           <div className="flex justify-end">
             <button 
               type="submit" 
@@ -372,18 +550,24 @@ const TileManager = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {tiles.length === 0 ? (
             <div className="col-span-full text-center py-12 bg-gray-50 rounded-lg">
-              <Image size={48} className="mx-auto text-gray-400 mb-4" />
+              <ImageIcon size={48} className="mx-auto text-gray-400 mb-4" />
               <p className="text-gray-500">No tiles found. Add some!</p>
             </div>
           ) : (
             tiles.map((tile) => (
               <div key={tile.id} className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                 <div className="h-48 overflow-hidden relative">
-                  <img 
-                    src={`http://localhost:8000${tile.image}`} 
-                    alt={tile.title} 
-                    className="w-full h-full object-cover"
-                  />
+                  {tile.primary_image ? (
+                    <img 
+                      src={tile.primary_image} 
+                      alt={tile.title} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full bg-gray-100">
+                      <Camera size={32} className="text-gray-400" />
+                    </div>
+                  )}
                   {tile.featured && (
                     <div className="absolute top-2 right-2 bg-yellow-400 text-yellow-800 p-1 rounded-full">
                       <Star size={16} />

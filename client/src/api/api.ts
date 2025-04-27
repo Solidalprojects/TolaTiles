@@ -1,3 +1,4 @@
+// client/src/api/api.ts - Update API endpoints
 
 // Base API URL configuration
 export const API_BASE_URL = 'http://localhost:8000';
@@ -22,12 +23,16 @@ export const API_ENDPOINTS = {
     FEATURED: `${API_BASE_URL}/api/tiles/?featured=true`,
     BY_CATEGORY: (categoryIdOrSlug: number | string) => 
       `${API_BASE_URL}/api/tiles/?category=${categoryIdOrSlug}`,
+    IMAGES: `${API_BASE_URL}/api/tile-images/`,
+    IMAGE_DETAIL: (id: number) => `${API_BASE_URL}/api/tile-images/${id}/`,
+    SET_PRIMARY: (id: number) => `${API_BASE_URL}/api/tile-images/${id}/set_as_primary/`,
   },
   PROJECTS: {
     BASE: `${API_BASE_URL}/api/projects/`,
     DETAIL: (idOrSlug: number | string) => `${API_BASE_URL}/api/projects/${idOrSlug}/`,
     FEATURED: `${API_BASE_URL}/api/projects/?featured=true`,
     IMAGES: `${API_BASE_URL}/api/project-images/`,
+    IMAGE_DETAIL: (id: number) => `${API_BASE_URL}/api/project-images/${id}/`,
   },
   CONTACT: {
     SUBMIT: `${API_BASE_URL}/api/contacts/`,

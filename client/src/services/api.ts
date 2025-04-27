@@ -1,15 +1,24 @@
 // client/src/services/api.ts
+// Fixed version to properly handle token authentication with axios
+
 import axios from 'axios';
 import { apiClient } from '../api/header';
 import { API_ENDPOINTS } from '../api/api';
-import { authHeader } from './auth';
+import { getStoredAuth } from './auth';
 import { Category, Tile, Project, FilterOptions } from '../types/types';
+
+// Helper function to get clean auth token
+const getAuthToken = (): string | null => {
+  const { token } = getStoredAuth();
+  return token && token.trim() !== '' ? token.trim() : null;
+};
 
 // Category API service
 export const categoryService = {
   getCategories: async (): Promise<Category[]> => {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.CATEGORIES.BASE, authHeader().Authorization);
+      const token = getAuthToken();
+      const response = await apiClient.get(API_ENDPOINTS.CATEGORIES.BASE, token || undefined);
       return response;
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -19,7 +28,8 @@ export const categoryService = {
 
   getCategoryById: async (id: number): Promise<Category> => {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.CATEGORIES.DETAIL(id), authHeader().Authorization);
+      const token = getAuthToken();
+      const response = await apiClient.get(API_ENDPOINTS.CATEGORIES.DETAIL(id), token || undefined);
       return response;
     } catch (error) {
       console.error(`Error fetching category with id ${id}:`, error);
@@ -29,7 +39,8 @@ export const categoryService = {
 
   createCategory: async (data: Partial<Category>): Promise<Category> => {
     try {
-      const response = await apiClient.post(API_ENDPOINTS.CATEGORIES.BASE, data, authHeader().Authorization);
+      const token = getAuthToken();
+      const response = await apiClient.post(API_ENDPOINTS.CATEGORIES.BASE, data, token || undefined);
       return response;
     } catch (error) {
       console.error('Error creating category:', error);
@@ -39,10 +50,13 @@ export const categoryService = {
 
   updateCategory: async (id: number, data: Partial<Category>): Promise<Category> => {
     try {
+      const token = getAuthToken();
+      const headers = token ? { 'Authorization': `Token ${token}` } : {};
+      
       const response = await axios.patch(
         API_ENDPOINTS.CATEGORIES.DETAIL(id),
         data,
-        { headers: authHeader() }
+        { headers }
       );
       return response.data;
     } catch (error) {
@@ -53,9 +67,12 @@ export const categoryService = {
 
   deleteCategory: async (id: number): Promise<void> => {
     try {
+      const token = getAuthToken();
+      const headers = token ? { 'Authorization': `Token ${token}` } : {};
+      
       await axios.delete(
         API_ENDPOINTS.CATEGORIES.DETAIL(id),
-        { headers: authHeader() }
+        { headers }
       );
     } catch (error) {
       console.error(`Error deleting category with id ${id}:`, error);
@@ -86,7 +103,8 @@ export const tileService = {
         }
       }
       
-      const response = await apiClient.get(url, authHeader().Authorization);
+      const token = getAuthToken();
+      const response = await apiClient.get(url, token || undefined);
       return response;
     } catch (error) {
       console.error('Error fetching tiles:', error);
@@ -96,7 +114,8 @@ export const tileService = {
 
   getTileById: async (id: number): Promise<Tile> => {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.TILES.DETAIL(id), authHeader().Authorization);
+      const token = getAuthToken();
+      const response = await apiClient.get(API_ENDPOINTS.TILES.DETAIL(id), token || undefined);
       return response;
     } catch (error) {
       console.error(`Error fetching tile with id ${id}:`, error);
@@ -106,15 +125,19 @@ export const tileService = {
 
   createTile: async (formData: FormData): Promise<Tile> => {
     try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'multipart/form-data'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+      
       const response = await axios.post(
         API_ENDPOINTS.TILES.BASE,
         formData,
-        { 
-          headers: {
-            ...authHeader(),
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        { headers }
       );
       return response.data;
     } catch (error) {
@@ -125,15 +148,19 @@ export const tileService = {
 
   updateTile: async (id: number, formData: FormData): Promise<Tile> => {
     try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'multipart/form-data'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+      
       const response = await axios.patch(
         API_ENDPOINTS.TILES.DETAIL(id),
         formData,
-        { 
-          headers: {
-            ...authHeader(),
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        { headers }
       );
       return response.data;
     } catch (error) {
@@ -144,9 +171,12 @@ export const tileService = {
 
   deleteTile: async (id: number): Promise<void> => {
     try {
+      const token = getAuthToken();
+      const headers = token ? { 'Authorization': `Token ${token}` } : {};
+      
       await axios.delete(
         API_ENDPOINTS.TILES.DETAIL(id),
-        { headers: authHeader() }
+        { headers }
       );
     } catch (error) {
       console.error(`Error deleting tile with id ${id}:`, error);
@@ -177,7 +207,8 @@ export const projectService = {
         }
       }
       
-      const response = await apiClient.get(url, authHeader().Authorization);
+      const token = getAuthToken();
+      const response = await apiClient.get(url, token || undefined);
       return response;
     } catch (error) {
       console.error('Error fetching projects:', error);
@@ -187,7 +218,8 @@ export const projectService = {
 
   getProjectById: async (id: number): Promise<Project> => {
     try {
-      const response = await apiClient.get(API_ENDPOINTS.PROJECTS.DETAIL(id), authHeader().Authorization);
+      const token = getAuthToken();
+      const response = await apiClient.get(API_ENDPOINTS.PROJECTS.DETAIL(id), token || undefined);
       return response;
     } catch (error) {
       console.error(`Error fetching project with id ${id}:`, error);
@@ -197,15 +229,19 @@ export const projectService = {
 
   createProject: async (formData: FormData): Promise<Project> => {
     try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'multipart/form-data'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+      
       const response = await axios.post(
         API_ENDPOINTS.PROJECTS.BASE,
         formData,
-        { 
-          headers: {
-            ...authHeader(),
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        { headers }
       );
       return response.data;
     } catch (error) {
@@ -216,15 +252,19 @@ export const projectService = {
 
   updateProject: async (id: number, formData: FormData): Promise<Project> => {
     try {
+      const token = getAuthToken();
+      const headers: Record<string, string> = {
+        'Content-Type': 'multipart/form-data'
+      };
+      
+      if (token) {
+        headers['Authorization'] = `Token ${token}`;
+      }
+      
       const response = await axios.patch(
         API_ENDPOINTS.PROJECTS.DETAIL(id),
         formData,
-        { 
-          headers: {
-            ...authHeader(),
-            'Content-Type': 'multipart/form-data'
-          }
-        }
+        { headers }
       );
       return response.data;
     } catch (error) {
@@ -235,9 +275,12 @@ export const projectService = {
 
   deleteProject: async (id: number): Promise<void> => {
     try {
+      const token = getAuthToken();
+      const headers = token ? { 'Authorization': `Token ${token}` } : {};
+      
       await axios.delete(
         API_ENDPOINTS.PROJECTS.DETAIL(id),
-        { headers: authHeader() }
+        { headers }
       );
     } catch (error) {
       console.error(`Error deleting project with id ${id}:`, error);

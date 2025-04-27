@@ -1,5 +1,5 @@
-// Fix 2: Update client/src/api/header.ts to properly handle token authentication
-// File: client/src/api/header.ts
+// client/src/api/header.ts
+// Fixed version to properly handle token authentication
 
 /**
  * Base API Client that ensures cookies are sent with requests
@@ -13,8 +13,9 @@ export const apiClient = {
         'Content-Type': 'application/json',
       };
       
-      if (token) {
-        headers['Authorization'] = `Token ${token}`;
+      // Only add Authorization header if token exists and is not empty
+      if (token && token.trim() !== '') {
+        headers['Authorization'] = `Token ${token.trim()}`;
       }
       
       const response = await fetch(url, {
@@ -48,8 +49,9 @@ export const apiClient = {
         'Content-Type': 'application/json',
       };
       
-      if (token) {
-        headers['Authorization'] = `Token ${token}`;
+      // Only add Authorization header if token exists and is not empty
+      if (token && token.trim() !== '') {
+        headers['Authorization'] = `Token ${token.trim()}`;
       }
       
       console.log('Making POST request to:', url);
@@ -89,7 +91,7 @@ export const apiClient = {
     }
   },
   
-  // Other methods remain the same...
+  // Other methods with the same token handling fix
   put: async (url: string, data: any, token?: string) => {
     try {
       const headers: HeadersInit = {
@@ -97,8 +99,9 @@ export const apiClient = {
         'Content-Type': 'application/json',
       };
       
-      if (token) {
-        headers['Authorization'] = `Token ${token}`;
+      // Only add Authorization header if token exists and is not empty
+      if (token && token.trim() !== '') {
+        headers['Authorization'] = `Token ${token.trim()}`;
       }
       
       const response = await fetch(url, {
@@ -133,8 +136,9 @@ export const apiClient = {
         'Content-Type': 'application/json',
       };
       
-      if (token) {
-        headers['Authorization'] = `Token ${token}`;
+      // Only add Authorization header if token exists and is not empty
+      if (token && token.trim() !== '') {
+        headers['Authorization'] = `Token ${token.trim()}`;
       }
       
       const response = await fetch(url, {
@@ -166,4 +170,3 @@ export const apiClient = {
     }
   }
 };
-

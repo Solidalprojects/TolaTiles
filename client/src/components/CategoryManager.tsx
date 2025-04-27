@@ -1,8 +1,11 @@
 // client/src/components/CategoryManager.tsx
+// Updated version with improved error handling and authentication
+
 import { useState, useEffect } from 'react';
 import { Category } from '../types/types';
 import { categoryService } from '../services/api';
 import { AlertCircle, Loader, Plus, X, Edit, Trash2 } from 'lucide-react';
+import { getStoredAuth } from '../services/auth';
 
 const CategoryManager = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -14,20 +17,49 @@ const CategoryManager = () => {
   });
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [authStatus, setAuthStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCategories();
+    checkAuthAndFetchData();
   }, []);
+
+  const checkAuthAndFetchData = async () => {
+    try {
+      // Check auth status for debugging
+      const { token } = getStoredAuth();
+      setAuthStatus(token ? `Token found (${token.substring(0, 5)}...)` : 'No token found');
+      
+      // Proceed to fetch categories
+      await fetchCategories();
+    } catch (err) {
+      console.error('Error during initial data fetch:', err);
+      setError('Could not initialize data. Please check your connection and authentication status.');
+      setLoading(false);
+    }
+  };
 
   const fetchCategories = async () => {
     try {
       setLoading(true);
       setError(null);
+      console.log('Fetching categories...');
       const data = await categoryService.getCategories();
+      console.log('Categories fetched successfully:', data.length);
       setCategories(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching categories:', err);
-      setError('Failed to fetch categories. Please try again later.');
+      let errorMessage = 'Failed to fetch categories. Please try again later.';
+      
+      // Enhanced error handling
+      if (err.message) {
+        if (err.message.includes('401')) {
+          errorMessage = 'Authentication error. Please try logging in again.';
+        } else if (err.message.includes('Network Error')) {
+          errorMessage = 'Network error. Please check your connection.';
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -53,9 +85,20 @@ const CategoryManager = () => {
       
       fetchCategories();
       resetForm();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error saving category:', err);
-      setError('Failed to save category. Please try again later.');
+      let errorMessage = 'Failed to save category. Please try again later.';
+      
+      // Enhanced error handling
+      if (err.message) {
+        if (err.message.includes('401')) {
+          errorMessage = 'Authentication error. Please try logging in again.';
+        } else if (err.message.includes('Network Error')) {
+          errorMessage = 'Network error. Please check your connection.';
+        }
+      }
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -68,9 +111,20 @@ const CategoryManager = () => {
         setError(null);
         await categoryService.deleteCategory(id);
         await fetchCategories();
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error deleting category:', err);
-        setError('Failed to delete category. Please try again later.');
+        let errorMessage = 'Failed to delete category. Please try again later.';
+        
+        // Enhanced error handling
+        if (err.message) {
+          if (err.message.includes('401')) {
+            errorMessage = 'Authentication error. Please try logging in again.';
+          } else if (err.message.includes('Network Error')) {
+            errorMessage = 'Network error. Please check your connection.';
+          }
+        }
+        
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -127,6 +181,13 @@ const CategoryManager = () => {
         <div className="flex items-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
           <AlertCircle size={18} className="mr-2" />
           <span className="block sm:inline">{error}</span>
+        </div>
+      )}
+
+      {/* Debug info - only visible during development */}
+      {process.env.NODE_ENV === 'development' && authStatus && (
+        <div className="mb-4 p-2 bg-gray-100 text-xs text-gray-600 rounded">
+          Auth status: {authStatus}
         </div>
       )}
 

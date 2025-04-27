@@ -48,15 +48,23 @@ export interface Category {
   images?: Tile[];
 }
 
+export interface TileImage {
+  id: number;
+  image: string;
+  image_url?: string;
+  thumbnail?: string;
+  thumbnail_url?: string;
+  caption?: string;
+  is_primary: boolean;
+  created_at: string;
+}
+
+
 export interface Tile {
   id: number;
   title: string;
   slug: string;
   description: string;
-  image: string;
-  image_url?: string;
-  thumbnail?: string;
-  thumbnail_url?: string;
   category: number;
   category_name?: string;
   featured: boolean;
@@ -67,6 +75,24 @@ export interface Tile {
   sku: string;
   created_at: string;
   updated_at: string;
+  primary_image?: string;
+  images_count: number;
+  images?: TileImage[];
+}
+
+export interface Category {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+  image?: string;
+  image_url?: string;
+  order: number;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+  tiles_count: number;
+  tiles?: Tile[];
 }
 
 export interface ProjectImage {

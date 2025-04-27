@@ -1,3 +1,5 @@
+// Fix for the ProtectedRoute component in App.tsx
+
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect, JSX } from 'react';
 import Navbar from './components/Navbar';
@@ -8,20 +10,29 @@ import Login from './admin/Login';
 import { isAuthenticated } from './services/auth';
 import './App.css';
 
-// Protected route component to handle authentication
+// Updated Protected route component with improved auth state management
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   // Force re-evaluation of auth status with a state
   const [isAuth, setIsAuth] = useState<boolean>(false);
   const [checkingAuth, setCheckingAuth] = useState<boolean>(true);
   
   useEffect(() => {
+    // Check authentication status
     const checkAuth = () => {
       const authenticated = isAuthenticated();
+      console.log("ProtectedRoute auth check:", authenticated);
       setIsAuth(authenticated);
       setCheckingAuth(false);
     };
     
     checkAuth();
+    
+    // Set up an interval to periodically check auth status (optional)
+    const authCheckInterval = setInterval(checkAuth, 5000);
+    
+    return () => {
+      clearInterval(authCheckInterval);
+    };
   }, []);
   
   if (checkingAuth) {
@@ -38,13 +49,15 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   
   if (!isAuth) {
     // Redirect to login if not authenticated
+    console.log("Not authenticated, redirecting to login");
     return <Navigate to="/auth/login" replace />;
   }
   
+  console.log("Authenticated, rendering protected content");
   return children;
 };
 
-// Public route component that redirects to dashboard if already logged in
+// Updated Public route component with improved auth state management
 const PublicOnlyRoute = ({ children }: { children: JSX.Element }) => {
   // Force re-evaluation of auth status with a state
   const [isAuth, setIsAuth] = useState<boolean>(false);
@@ -53,6 +66,7 @@ const PublicOnlyRoute = ({ children }: { children: JSX.Element }) => {
   useEffect(() => {
     const checkAuth = () => {
       const authenticated = isAuthenticated();
+      console.log("PublicOnlyRoute auth check:", authenticated);
       setIsAuth(authenticated);
       setCheckingAuth(false);
     };
@@ -74,9 +88,11 @@ const PublicOnlyRoute = ({ children }: { children: JSX.Element }) => {
   
   if (isAuth) {
     // Redirect to dashboard if already authenticated
+    console.log("Already authenticated, redirecting to dashboard");
     return <Navigate to="/auth/dashboard" replace />;
   }
   
+  console.log("Not authenticated, rendering public content");
   return children;
 };
 
@@ -249,4 +265,4 @@ function App() {
   );
 }
 
-export default App;
+export default App

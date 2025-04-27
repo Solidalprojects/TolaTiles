@@ -10,11 +10,11 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
-from .models import TileCategory, TileImage, Project, ProjectImage, Contact, Subscriber
+from .models import TileCategory, TileImage, Project, ProjectImage, Contact, Subscriber, Tile
 from .serializers import (
     UserSerializer, TileCategorySerializer, TileCategoryDetailSerializer,
     TileImageSerializer, ProjectSerializer, ProjectDetailSerializer,
-    ProjectImageSerializer, ContactSerializer, SubscriberSerializer
+    ProjectImageSerializer, ContactSerializer, SubscriberSerializer, TileSerializer, TileDetailSerializer
 )
 import logging
 
@@ -221,18 +221,70 @@ class TileCategoryViewSet(viewsets.ModelViewSet):
 
 class TileImageViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for viewing and editing Tiles.
+    ViewSet for managing Tile Images.
     """
     queryset = TileImage.objects.all()
     serializer_class = TileImageSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    
+    def get_queryset(self):
+        queryset = TileImage.objects.all()
+        
+        # Filter by tile if provided
+        tile_id = self.request.query_params.get('tile')
+        if tile_id:
+            queryset = queryset.filter(tile_id=tile_id)
+        
+        # Filter by is_primary
+        is_primary = self.request.query_params.get('is_primary')
+        if is_primary is not None:
+            primary = is_primary.lower() == 'true'
+            queryset = queryset.filter(is_primary=primary)
+        
+        return queryset.order_by('-is_primary', 'created_at')
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        return context
+    
+    def perform_create(self, serializer):
+        # When creating a new image, make sure only one is primary per tile
+        new_image = serializer.save()
+        if new_image.is_primary:
+            # Ensure no other images for this tile are primary
+            TileImage.objects.filter(tile=new_image.tile, is_primary=True).exclude(id=new_image.id).update(is_primary=False)
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def set_as_primary(self, request, pk=None):
+        """Set this image as primary for its parent tile"""
+        image = self.get_object()
+        
+        # Set this image as primary
+        image.is_primary = True
+        image.save()  # The model's save method handles updating other images
+        
+        return Response({'status': 'set as primary image'})
+    
+    
+class TileViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for viewing and editing Tiles.
+    """
+    queryset = Tile.objects.all()
+    serializer_class = TileSerializer
     permission_classes = [IsAdminOrReadOnly]
     lookup_field = 'slug'
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description', 'material', 'sku']
     ordering_fields = ['created_at', 'price', 'title']
     
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return TileDetailSerializer
+        return TileSerializer
+    
     def get_queryset(self):
-        queryset = TileImage.objects.all()
+        queryset = Tile.objects.all()
         
         # Filter by category
         category = self.request.query_params.get('category')
@@ -275,7 +327,73 @@ class TileImageViewSet(viewsets.ModelViewSet):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         return context
-
+    
+    def create(self, request, *args, **kwargs):
+        """Custom create method to handle tile and its images"""
+        # Extract and remove images data from request
+        images_data = []
+        
+        # Handle the tile data first
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        tile = serializer.save()
+        
+        # Process images if available
+        if 'images' in request.data:
+            images = request.FILES.getlist('images')
+            is_primary = request.data.get('primary_image', 0)
+            
+            # Convert is_primary to int if it's a string
+            try:
+                is_primary = int(is_primary)
+            except (ValueError, TypeError):
+                is_primary = 0
+            
+            for i, image_file in enumerate(images):
+                # Set as primary if it's the first image or if it matches the primary index
+                TileImage.objects.create(
+                    tile=tile,
+                    image=image_file,
+                    is_primary=(i == is_primary)
+                )
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
+    def update(self, request, *args, **kwargs):
+        """Custom update method to handle images"""
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        
+        # Process new images if available
+        if 'images' in request.data:
+            images = request.FILES.getlist('images')
+            is_primary = request.data.get('primary_image', None)
+            
+            # Convert is_primary to int if it's a string
+            try:
+                is_primary = int(is_primary) if is_primary is not None else None
+            except (ValueError, TypeError):
+                is_primary = None
+            
+            for i, image_file in enumerate(images):
+                # Set as primary if specified
+                TileImage.objects.create(
+                    tile=instance,
+                    image=image_file,
+                    is_primary=(is_primary is not None and i == is_primary)
+                )
+        
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+        
+        return Response(serializer.data)
 class ProjectViewSet(viewsets.ModelViewSet):
     """
     ViewSet for viewing and editing Projects.
