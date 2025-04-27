@@ -1,4 +1,4 @@
-# server/api/urls.py - Update URLs to include the new tile-images endpoints
+# server/api/urls.py - Updated with new endpoints for product types, team, and testimonials
 
 from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
@@ -13,6 +13,11 @@ router.register(r'projects', views.ProjectViewSet)
 router.register(r'project-images', views.ProjectImageViewSet)
 router.register(r'contacts', views.ContactViewSet)
 router.register(r'subscribers', views.SubscriberViewSet)
+
+# New ViewSet registrations
+router.register(r'product-types', views.ProductTypeViewSet)
+router.register(r'team', views.TeamMemberViewSet)
+router.register(r'testimonials', views.CustomerTestimonialViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -39,4 +44,18 @@ urlpatterns = [
     
     # Project URLs with both ID and slug support
     re_path(r'^projects/(?P<slug>[\w-]+)/$', views.ProjectViewSet.as_view({'get': 'retrieve'}), name='project-detail'),
+    
+    # Product Type URLs with both ID and slug support
+    re_path(r'^product-types/(?P<slug>[\w-]+)/$', views.ProductTypeViewSet.as_view({'get': 'retrieve'}), name='product-type-detail'),
+    
+    # Testimonial actions
+    path('testimonials/<int:pk>/approve/', views.CustomerTestimonialViewSet.as_view({'post': 'approve'}), name='testimonial-approve'),
+    
+    # Filtering tiles by product type
+    path('tiles/by-product-type/<int:product_type_id>/', views.TileViewSet.as_view({'get': 'list'}), name='tiles-by-product-type'),
+    path('tiles/by-product-type/<slug:product_type_slug>/', views.TileViewSet.as_view({'get': 'list'}), name='tiles-by-product-type-slug'),
+    
+    # Filtering projects by product type
+    path('projects/by-product-type/<int:product_type_id>/', views.ProjectViewSet.as_view({'get': 'list'}), name='projects-by-product-type'),
+    path('projects/by-product-type/<slug:product_type_slug>/', views.ProjectViewSet.as_view({'get': 'list'}), name='projects-by-product-type-slug'),
 ]
