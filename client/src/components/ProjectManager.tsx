@@ -1,9 +1,11 @@
-// client/src/components/ProjectManager.tsx - updated version with image fixes
+// client/src/components/ProjectManager.tsx
 import { useState, useEffect } from 'react';
 import { Project, ProjectImage } from '../types/types';
 import { projectService } from '../services/api';
 import { AlertCircle, Loader, Plus, X, Edit, Trash2, Camera } from 'lucide-react';
 import { formatImageUrl } from '../utils/imageUtils';
+import { getStoredAuth } from '../services/auth';
+import { API_ENDPOINTS } from '../api/api';
 
 const ProjectManager = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -77,6 +79,7 @@ const ProjectManager = () => {
       setError(null);
       
       const formData = new FormData();
+      
       // Append project data
       Object.entries(newProject).forEach(([key, value]) => {
         formData.append(key, value.toString());
@@ -96,20 +99,34 @@ const ProjectManager = () => {
       
       // Upload images if any
       if (projectImages.length > 0) {
+        const token = getStoredAuth().token;
+        
         for (let i = 0; i < projectImages.length; i++) {
           const imageFormData = new FormData();
           imageFormData.append('project', projectId.toString());
           imageFormData.append('image', projectImages[i]);
-          imageFormData.append('caption', imageCaptions[i] || '');
           
-          // Use token from localStorage for authorization
-          await fetch(`http://localhost:8000/api/project-images/`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Token ${localStorage.getItem('adminToken')}`
-            },
-            body: imageFormData
-          });
+          if (imageCaptions[i]) {
+            imageFormData.append('caption', imageCaptions[i]);
+          }
+          
+          // Set the first image as primary
+          if (i === 0) {
+            imageFormData.append('is_primary', 'true');
+          }
+          
+          try {
+            // Use the project images endpoint from API_ENDPOINTS
+            await fetch(API_ENDPOINTS.PROJECTS.IMAGES, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Token ${token}`
+              },
+              body: imageFormData
+            });
+          } catch (imageError) {
+            console.error('Error uploading image:', imageError);
+          }
         }
       }
       
@@ -168,8 +185,13 @@ const ProjectManager = () => {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    if (!dateString) return '';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    } catch (e) {
+      return dateString;
+    }
   };
 
   return (
@@ -300,6 +322,7 @@ const ProjectManager = () => {
               {projectImages.length > 0 && (
                 <div className="mt-4 p-4 bg-gray-100 rounded-md">
                   <h4 className="font-medium mb-2">Image Captions</h4>
+                  <p className="text-sm text-gray-500 mb-3">The first image will be set as the primary image.</p>
                   {projectImages.map((file, index) => (
                     <div key={index} className="flex items-center mb-2">
                       <span className="mr-2 text-sm truncate" style={{ maxWidth: '200px' }}>{file.name}</span>
@@ -353,7 +376,7 @@ const ProjectManager = () => {
                 <div className="h-48 overflow-hidden relative">
                   {project.primary_image ? (
                     <img 
-                      src={formatImageUrl(project.primary_image)}
+                      src={project.primary_image}
                       alt={project.title} 
                       className="w-full h-full object-cover"
                     />

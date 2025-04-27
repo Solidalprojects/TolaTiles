@@ -103,11 +103,38 @@ export const tileService = {
         }
       }
       
+      console.log('Fetching tiles from URL:', url);
+      
       const token = getAuthToken();
       const response = await apiClient.get(url, token || undefined);
+      
+      console.log('Tiles fetched:', response);
       return response;
     } catch (error) {
       console.error('Error fetching tiles:', error);
+      throw error;
+    }
+  },
+
+  getFeaturedTiles: async (): Promise<Tile[]> => {
+    try {
+      const token = getAuthToken();
+      const response = await apiClient.get(API_ENDPOINTS.TILES.FEATURED, token || undefined);
+      console.log('Featured tiles fetched:', response);
+      return response;
+    } catch (error) {
+      console.error('Error fetching featured tiles:', error);
+      throw error;
+    }
+  },
+
+  getTilesByCategory: async (categoryIdOrSlug: number | string): Promise<Tile[]> => {
+    try {
+      const token = getAuthToken();
+      const response = await apiClient.get(API_ENDPOINTS.TILES.BY_CATEGORY(categoryIdOrSlug), token || undefined);
+      return response;
+    } catch (error) {
+      console.error(`Error fetching tiles by category ${categoryIdOrSlug}:`, error);
       throw error;
     }
   },
@@ -134,11 +161,15 @@ export const tileService = {
         headers['Authorization'] = `Token ${token}`;
       }
       
+      console.log('Creating tile with data:', Object.fromEntries(formData.entries()));
+      
       const response = await axios.post(
         API_ENDPOINTS.TILES.BASE,
         formData,
         { headers }
       );
+      
+      console.log('Tile created:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error creating tile:', error);
@@ -162,6 +193,8 @@ export const tileService = {
         formData,
         { headers }
       );
+      
+      console.log('Tile updated:', response.data);
       return response.data;
     } catch (error) {
       console.error(`Error updating tile with id ${id}:`, error);
@@ -178,8 +211,96 @@ export const tileService = {
         API_ENDPOINTS.TILES.DETAIL(id),
         { headers }
       );
+      
+      console.log(`Tile ${id} deleted successfully`);
     } catch (error) {
       console.error(`Error deleting tile with id ${id}:`, error);
+      throw error;
+    }
+  },
+  
+  // New methods for tile images
+  addTileImage: async (tileId: number, imageFile: File, caption?: string, isPrimary: boolean = false): Promise<any> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token required');
+      }
+      
+      const formData = new FormData();
+      formData.append('tile', tileId.toString());
+      formData.append('image', imageFile);
+      
+      if (caption) {
+        formData.append('caption', caption);
+      }
+      
+      if (isPrimary) {
+        formData.append('is_primary', 'true');
+      }
+      
+      const response = await axios.post(
+        API_ENDPOINTS.TILES.IMAGES,
+        formData,
+        { 
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'multipart/form-data'
+          } 
+        }
+      );
+      
+      console.log('Tile image added:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error adding image to tile ${tileId}:`, error);
+      throw error;
+    }
+  },
+
+  deleteTileImage: async (imageId: number): Promise<void> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token required');
+      }
+      
+      await axios.delete(
+        API_ENDPOINTS.TILES.IMAGE_DETAIL(imageId),
+        { 
+          headers: {
+            'Authorization': `Token ${token}` 
+          }
+        }
+      );
+      
+      console.log(`Tile image ${imageId} deleted successfully`);
+    } catch (error) {
+      console.error(`Error deleting tile image ${imageId}:`, error);
+      throw error;
+    }
+  },
+
+  setTileImageAsPrimary: async (imageId: number): Promise<void> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token required');
+      }
+      
+      const response = await axios.post(
+        API_ENDPOINTS.TILES.SET_PRIMARY(imageId),
+        {},
+        { 
+          headers: {
+            'Authorization': `Token ${token}` 
+          }
+        }
+      );
+      
+      console.log(`Tile image ${imageId} set as primary:`, response.data);
+    } catch (error) {
+      console.error(`Error setting tile image ${imageId} as primary:`, error);
       throw error;
     }
   }
@@ -209,9 +330,24 @@ export const projectService = {
       
       const token = getAuthToken();
       const response = await apiClient.get(url, token || undefined);
+      
+      // Log response for debugging
+      console.log('Projects fetched:', response);
+      
       return response;
     } catch (error) {
       console.error('Error fetching projects:', error);
+      throw error;
+    }
+  },
+
+  getFeaturedProjects: async (): Promise<Project[]> => {
+    try {
+      const token = getAuthToken();
+      const response = await apiClient.get(API_ENDPOINTS.PROJECTS.FEATURED, token || undefined);
+      return response;
+    } catch (error) {
+      console.error('Error fetching featured projects:', error);
       throw error;
     }
   },
@@ -238,11 +374,15 @@ export const projectService = {
         headers['Authorization'] = `Token ${token}`;
       }
       
+      console.log('Creating project with data:', Object.fromEntries(formData.entries()));
+      
       const response = await axios.post(
         API_ENDPOINTS.PROJECTS.BASE,
         formData,
         { headers }
       );
+      
+      console.log('Project created:', response.data);
       return response.data;
     } catch (error) {
       console.error('Error creating project:', error);
@@ -266,6 +406,8 @@ export const projectService = {
         formData,
         { headers }
       );
+      
+      console.log('Project updated:', response.data);
       return response.data;
     } catch (error) {
       console.error(`Error updating project with id ${id}:`, error);
@@ -282,8 +424,97 @@ export const projectService = {
         API_ENDPOINTS.PROJECTS.DETAIL(id),
         { headers }
       );
+      
+      console.log(`Project ${id} deleted successfully`);
     } catch (error) {
       console.error(`Error deleting project with id ${id}:`, error);
+      throw error;
+    }
+  },
+
+  // New methods for handling project images
+  addProjectImage: async (projectId: number, imageFile: File, caption?: string, isPrimary: boolean = false): Promise<any> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token required');
+      }
+      
+      const formData = new FormData();
+      formData.append('project', projectId.toString());
+      formData.append('image', imageFile);
+      
+      if (caption) {
+        formData.append('caption', caption);
+      }
+      
+      if (isPrimary) {
+        formData.append('is_primary', 'true');
+      }
+      
+      const response = await axios.post(
+        API_ENDPOINTS.PROJECTS.IMAGES,
+        formData,
+        { 
+          headers: {
+            'Authorization': `Token ${token}`,
+            'Content-Type': 'multipart/form-data'
+          } 
+        }
+      );
+      
+      console.log('Project image added:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error(`Error adding image to project ${projectId}:`, error);
+      throw error;
+    }
+  },
+
+  deleteProjectImage: async (imageId: number): Promise<void> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token required');
+      }
+      
+      await axios.delete(
+        API_ENDPOINTS.PROJECTS.IMAGE_DETAIL(imageId),
+        { 
+          headers: {
+            'Authorization': `Token ${token}` 
+          }
+        }
+      );
+      
+      console.log(`Project image ${imageId} deleted successfully`);
+    } catch (error) {
+      console.error(`Error deleting project image ${imageId}:`, error);
+      throw error;
+    }
+  },
+
+  setProjectImageAsPrimary: async (imageId: number): Promise<void> => {
+    try {
+      const token = getAuthToken();
+      if (!token) {
+        throw new Error('Authentication token required');
+      }
+      
+      // The API endpoint for setting a project image as primary may vary
+      const response = await axios.post(
+        `${API_ENDPOINTS.PROJECTS.IMAGE_DETAIL(imageId)}set_as_primary/`,
+        {},
+        { 
+          headers: {
+            'Authorization': `Token ${token}` 
+          }
+        }
+      );
+      
+      console.log(`Project image ${imageId} set as primary:`, response.data);
+    } catch (error) {
+      console.error(`Error setting project image ${imageId} as primary:`, error);
       throw error;
     }
   }

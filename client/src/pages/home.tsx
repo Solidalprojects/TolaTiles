@@ -1,34 +1,37 @@
+// client/src/pages/home.tsx
 import React, { useState, useEffect } from "react";
-import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Tile, Category, Project } from '../types/types';
+import { tileService, categoryService, projectService } from '../services/api';
+import { formatImageUrl } from '../utils/imageUtils';
 
 const Home = () => {
   const [featuredTiles, setFeaturedTiles] = useState<Tile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-
-  const API_URL = 'http://localhost:8000/api/';
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Fetch featured tiles
-        const tilesResponse = await axios.get(`${API_URL}tiles/?featured=true`);
-        setFeaturedTiles(tilesResponse.data);
+        const tilesData = await tileService.getTiles({ featured: true });
+        setFeaturedTiles(tilesData);
         
         // Fetch categories
-        const categoriesResponse = await axios.get(`${API_URL}categories/`);
-        setCategories(categoriesResponse.data);
+        const categoriesData = await categoryService.getCategories();
+        setCategories(categoriesData);
         
         // Fetch featured projects
-        const projectsResponse = await axios.get(`${API_URL}projects/?featured=true`);
-        setFeaturedProjects(projectsResponse.data);
+        const projectsData = await projectService.getProjects({ featured: true });
+        setFeaturedProjects(projectsData);
       } catch (error) {
         console.error('Error fetching data:', error);
+        setError('Failed to load content. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -36,6 +39,12 @@ const Home = () => {
 
     fetchData();
   }, []);
+
+  // Format date helper
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
 
   return (
     <div className="home-container">
@@ -64,7 +73,7 @@ const Home = () => {
               </div>
             </div>
             <div className="mt-10 lg:mt-0 lg:w-1/2">
-              {/* Placeholder for hero image - replace with actual image */}
+              {/* Placeholder for hero image */}
               <div className="bg-blue-600 h-64 rounded-lg flex items-center justify-center">
                 <p className="text-xl font-semibold">Beautiful Tile Installation Image</p>
               </div>
@@ -80,18 +89,28 @@ const Home = () => {
           
           {loading ? (
             <div className="flex justify-center">
-              <p>Loading featured tiles...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500">
+              <p>{error}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {featuredTiles.length > 0 ? (
                 featuredTiles.map((tile) => (
                   <div key={tile.id} className="bg-gray-50 rounded-lg overflow-hidden shadow-md">
-                    <img 
-                      src={`http://localhost:8000${tile.images}`} 
-                      alt={tile.title}
-                      className="w-full h-48 object-cover"
-                    />
+                    {tile.primary_image ? (
+                      <img 
+                        src={tile.primary_image}
+                        alt={tile.title}
+                        className="w-full h-48 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+                        <span className="text-gray-500">No image available</span>
+                      </div>
+                    )}
                     <div className="p-4">
                       <h3 className="text-xl font-semibold mb-2">{tile.title}</h3>
                       <p className="text-gray-600 mb-4">{tile.description}</p>
@@ -99,6 +118,9 @@ const Home = () => {
                         <span className="text-sm text-gray-500">
                           {categories.find(c => c.id === tile.category)?.name}
                         </span>
+                        {tile.price && (
+                          <span className="font-medium">${tile.price}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -118,7 +140,11 @@ const Home = () => {
           
           {loading ? (
             <div className="flex justify-center">
-              <p>Loading categories...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500">
+              <p>{error}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -128,7 +154,7 @@ const Home = () => {
                     <div className="p-6">
                       <h3 className="text-xl font-semibold mb-2">{category.name}</h3>
                       <p className="text-gray-600 mb-4">{category.description}</p>
-                      <Link to={`/categories/${category.id}`} className="text-blue-600 font-medium hover:text-blue-800">
+                      <Link to={`/categories/${category.slug}`} className="text-blue-600 font-medium hover:text-blue-800">
                         View Tiles →
                       </Link>
                     </div>
@@ -149,16 +175,20 @@ const Home = () => {
           
           {loading ? (
             <div className="flex justify-center">
-              <p>Loading featured projects...</p>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+            </div>
+          ) : error ? (
+            <div className="text-center text-red-500">
+              <p>{error}</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
               {featuredProjects.length > 0 ? (
                 featuredProjects.map((project) => (
                   <div key={project.id} className="bg-gray-50 rounded-lg overflow-hidden shadow-md">
-                    {project.images && project.images.length > 0 ? (
+                    {project.primary_image ? (
                       <img 
-                        src={`http://localhost:8000${project.images[0].image}`} 
+                        src={project.primary_image}
                         alt={project.title}
                         className="w-full h-64 object-cover"
                       />
@@ -172,14 +202,14 @@ const Home = () => {
                       <div className="mb-4">
                         <p className="text-gray-600"><strong>Client:</strong> {project.client}</p>
                         <p className="text-gray-600"><strong>Location:</strong> {project.location}</p>
-                        <p className="text-gray-600"><strong>Completed:</strong> {new Date(project.completed_date).toLocaleDateString()}</p>
+                        <p className="text-gray-600"><strong>Completed:</strong> {formatDate(project.completed_date)}</p>
                       </div>
                       <p className="text-gray-700 mb-4">
                         {project.description.length > 150
                           ? `${project.description.substring(0, 150)}...`
                           : project.description}
                       </p>
-                      <Link to={`/projects/${project.id}`} className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition">
+                      <Link to={`/projects/${project.slug}`} className="inline-block bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 transition">
                         View Project Details
                       </Link>
                     </div>
