@@ -1,14 +1,30 @@
+// components/EnhancedNavbar.tsx
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, isAuthenticated, isAdmin } from '../services/auth';
 import logo from '../assets/tolatiles.jpg';
-import { Menu, X, LogOut, User, ChevronDown, Home, Grid, Briefcase, Settings } from 'lucide-react';
+import { 
+  Menu, X, LogOut, User, ChevronDown, Home, Grid, Briefcase, 
+  Settings, Users, MessageSquare, Phone, Flame, Droplet, 
+  Home as HomeIcon, Grid as GridIcon
+} from 'lucide-react';
 
-const Navbar = () => {
+// Product types menu items
+const productTypes = [
+  { name: 'All Tiles', icon: <Grid size={18} />, path: '/products/tiles' },
+  { name: 'Backsplashes', icon: <Grid size={18} />, path: '/products/backsplashes' },
+  { name: 'Fireplaces', icon: <Flame size={18} />, path: '/products/fireplaces' },
+  { name: 'Flooring', icon: <GridIcon size={18} />, path: '/products/flooring' },
+  { name: 'Patios', icon: <HomeIcon size={18} />, path: '/products/patios' },
+  { name: 'Showers', icon: <Droplet size={18} />, path: '/products/showers' },
+];
+
+const EnhancedNavbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isProductsMenuOpen, setIsProductsMenuOpen] = useState(false);
   const [username, setUsername] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,11 +54,39 @@ const Navbar = () => {
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
+    // Close other menus when mobile menu is toggled
+    setIsProductsMenuOpen(false);
   };
 
   const toggleProfileMenu = () => {
     setIsProfileMenuOpen(!isProfileMenuOpen);
+    // Close products menu when profile menu is toggled
+    setIsProductsMenuOpen(false);
   };
+
+  const toggleProductsMenu = () => {
+    setIsProductsMenuOpen(!isProductsMenuOpen);
+    // Close profile menu when products menu is toggled
+    setIsProfileMenuOpen(false);
+  };
+
+  // Close menus when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (isProductsMenuOpen || isProfileMenuOpen) {
+        const target = event.target as HTMLElement;
+        if (!target.closest('.menu-container')) {
+          setIsProductsMenuOpen(false);
+          setIsProfileMenuOpen(false);
+        }
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProductsMenuOpen, isProfileMenuOpen]);
 
   return (
     <nav className="bg-gradient-to-r from-blue-900 to-blue-700 shadow-md">
@@ -64,17 +108,57 @@ const Navbar = () => {
               <Home size={18} className="mr-1" />
               <span>Home</span>
             </Link>
+            
+            {/* Products Dropdown Menu */}
+            <div className="relative menu-container">
+              <button
+                className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center"
+                onClick={toggleProductsMenu}
+              >
+                <Grid size={18} className="mr-1" />
+                <span>Products</span>
+                <ChevronDown size={16} className={`ml-1 transform transition-transform ${isProductsMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              
+              {isProductsMenuOpen && (
+                <div className="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-20">
+                  {productTypes.map((item, index) => (
+                    <Link
+                      key={index}
+                      to={item.path}
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      onClick={() => setIsProductsMenuOpen(false)}
+                    >
+                      <span className="mr-2">{item.icon}</span>
+                      {item.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+            
             <Link to="/projects" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
               <Briefcase size={18} className="mr-1" />
               <span>Projects</span>
             </Link>
-            <Link to="/categories" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
-              <Grid size={18} className="mr-1" />
-              <span>Categories</span>
+            
+            <Link to="/team" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
+              <Users size={18} className="mr-1" />
+              <span>Our Team</span>
+            </Link>
+            
+            <Link to="/testimonials" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
+              <MessageSquare size={18} className="mr-1" />
+              <span>Testimonials</span>
+            </Link>
+            
+            <Link to="/contact" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
+              <Phone size={18} className="mr-1" />
+              <span>Contact</span>
             </Link>
             
             {isLoggedIn ? (
-              <div className="relative ml-3">
+              <div className="relative ml-3 menu-container">
                 <div>
                   <button
                     type="button"
@@ -83,12 +167,12 @@ const Navbar = () => {
                   >
                     <User size={18} className="mr-2" />
                     <span>{username}</span>
-                    <ChevronDown size={16} className="ml-1" />
+                    <ChevronDown size={16} className={`ml-1 transform transition-transform ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
                   </button>
                 </div>
                 
                 {isProfileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20">
                     <Link 
                       to="/auth/dashboard" 
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
@@ -145,6 +229,40 @@ const Navbar = () => {
               <Home size={18} className="mr-2" />
               Home
             </Link>
+            
+            {/* Products collapsible section */}
+            <div>
+              <button
+                className="text-white hover:bg-blue-700 w-full text-left px-3 py-2 rounded-md flex items-center justify-between"
+                onClick={() => setIsProductsMenuOpen(!isProductsMenuOpen)}
+              >
+                <span className="flex items-center">
+                  <Grid size={18} className="mr-2" />
+                  Products
+                </span>
+                <ChevronDown
+                  size={18}
+                  className={`transform transition-transform ${isProductsMenuOpen ? 'rotate-180' : ''}`}
+                />
+              </button>
+              
+              {isProductsMenuOpen && (
+                <div className="pl-6 mt-1 space-y-1 border-l border-blue-700 ml-4">
+                  {productTypes.map((item, index) => (
+                    <Link
+                      key={index}
+                      to={item.path}
+                      className="text-blue-200 hover:bg-blue-700 hover:text-white block px-3 py-2 rounded-md flex items-center"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                      <span className="mr-2">{item.icon}</span>
+                      {item.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
+            
             <Link 
               to="/projects" 
               className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
@@ -153,13 +271,32 @@ const Navbar = () => {
               <Briefcase size={18} className="mr-2" />
               Projects
             </Link>
+            
             <Link 
-              to="/categories" 
+              to="/team" 
               className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <Grid size={18} className="mr-2" />
-              Categories
+              <Users size={18} className="mr-2" />
+              Our Team
+            </Link>
+            
+            <Link 
+              to="/testimonials" 
+              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <MessageSquare size={18} className="mr-2" />
+              Testimonials
+            </Link>
+            
+            <Link 
+              to="/contact" 
+              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <Phone size={18} className="mr-2" />
+              Contact
             </Link>
             
             {isLoggedIn ? (
@@ -203,4 +340,4 @@ const Navbar = () => {
   );
 };
 
-export default Navbar;
+export default EnhancedNavbar;
