@@ -206,7 +206,7 @@ export interface PaginatedResponse<T> {
 export interface FilterOptions {
   featured?: boolean;
   category?: number | string;
-  product_type?: number | string; // New field
+  product_type?: number | string;
   in_stock?: boolean;
   material?: string;
   search?: string;
@@ -216,4 +216,12 @@ export interface FilterOptions {
   page?: number;
   page_size?: number;
   ordering?: string;
+  
+  // Add additional filtering options that might be common across services
+  active?: boolean;
+  approved?: boolean;
+  rating?: number;
+  project?: number;
+  min_rating?: number;
+  max_rating?: number;
 }

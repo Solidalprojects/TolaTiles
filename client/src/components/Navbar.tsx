@@ -1,11 +1,11 @@
-// components/EnhancedNavbar.tsx
+// components/Navbar.tsx
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, isAuthenticated, isAdmin } from '../services/auth';
 import logo from '../assets/tolatiles.jpg';
 import { 
   Menu, X, LogOut, User, ChevronDown, Home, Grid, Briefcase, 
-  Settings, Users, MessageSquare, Phone, Flame, Droplet, 
+  Settings, Phone, Flame, Droplet, Info, 
   Home as HomeIcon, Grid as GridIcon
 } from 'lucide-react';
 
@@ -19,7 +19,7 @@ const productTypes = [
   { name: 'Showers', icon: <Droplet size={18} />, path: '/products/showers' },
 ];
 
-const EnhancedNavbar = () => {
+const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -98,6 +98,10 @@ const EnhancedNavbar = () => {
               src={logo} 
               alt="Tola Tiles" 
               className="h-10 w-auto"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = "https://via.placeholder.com/40x40?text=TT";
+              }}
             />
             <span className="text-white font-bold text-lg">Tola Tiles</span>
           </Link>
@@ -142,14 +146,9 @@ const EnhancedNavbar = () => {
               <span>Projects</span>
             </Link>
             
-            <Link to="/team" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
-              <Users size={18} className="mr-1" />
-              <span>Our Team</span>
-            </Link>
-            
-            <Link to="/testimonials" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
-              <MessageSquare size={18} className="mr-1" />
-              <span>Testimonials</span>
+            <Link to="/about" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
+              <Info size={18} className="mr-1" />
+              <span>About Us</span>
             </Link>
             
             <Link to="/contact" className="text-white hover:text-blue-200 px-3 py-2 rounded-md transition-colors flex items-center">
@@ -273,21 +272,12 @@ const EnhancedNavbar = () => {
             </Link>
             
             <Link 
-              to="/team" 
+              to="/about" 
               className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
-              <Users size={18} className="mr-2" />
-              Our Team
-            </Link>
-            
-            <Link 
-              to="/testimonials" 
-              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <MessageSquare size={18} className="mr-2" />
-              Testimonials
+              <Info size={18} className="mr-2" />
+              About Us
             </Link>
             
             <Link 
@@ -340,4 +330,4 @@ const EnhancedNavbar = () => {
   );
 };
 
-export default EnhancedNavbar;
+export default Navbar;

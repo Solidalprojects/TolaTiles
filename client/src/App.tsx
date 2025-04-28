@@ -1,4 +1,4 @@
-// Updated App.tsx to include both Tile and Project detail routes
+// Updated App.tsx with About and Projects pages
 
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect, JSX } from 'react';
@@ -7,8 +7,10 @@ import Footer from './components/Footer';
 import Home from './pages/home';
 import Dashboard from './components/Dashboard';
 import Login from './admin/Login';
-import TileDetail from './pages/TileDetail'; // Import the TileDetail component
-import ProjectDetail from './pages/ProjectDetail'; // Import the ProjectDetail component
+import TileDetail from './pages/TileDetail';
+import ProjectDetail from './pages/ProjectDetail';
+import About from './pages/About'; // Import the About page component
+import Projects from './pages/Projects'; // Import the Projects page component
 import { isAuthenticated } from './services/auth';
 import './App.css';
 
@@ -228,44 +230,28 @@ function App() {
           }
         />
         
-        {/* Category routes */}
+        {/* About Us Page with Testimonials and Team */}
         <Route
-          path="/categories"
+          path="/about"
           element={
             <>
               <Navbar />
               <main className="min-h-screen bg-gray-50">
-                <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-6">Tile Categories</h1>
-                  <p className="text-lg text-gray-600 mb-12">
-                    Browse through our extensive collection of premium tile categories for your next project.
-                  </p>
-                  <div className="text-center py-16">
-                    <p className="text-gray-500">Categories page content will be implemented here.</p>
-                  </div>
-                </div>
+                <About />
               </main>
               <Footer />
             </>
           }
         />
         
-        {/* Projects routes */}
+        {/* Projects listing page */}
         <Route
           path="/projects"
           element={
             <>
               <Navbar />
               <main className="min-h-screen bg-gray-50">
-                <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-6">Our Projects</h1>
-                  <p className="text-lg text-gray-600 mb-12">
-                    Explore our featured tile installation projects and get inspired for your own space.
-                  </p>
-                  <div className="text-center py-16">
-                    <p className="text-gray-500">Projects page content will be implemented here.</p>
-                  </div>
-                </div>
+                <Projects />
               </main>
               <Footer />
             </>
@@ -286,6 +272,28 @@ function App() {
                   </p>
                   <div className="text-center py-16">
                     <p className="text-gray-500">Contact form will be implemented here.</p>
+                  </div>
+                </div>
+              </main>
+              <Footer />
+            </>
+          }
+        />
+        
+        {/* Product types routes */}
+        <Route
+          path="/products/:slug"
+          element={
+            <>
+              <Navbar />
+              <main className="min-h-screen bg-gray-50">
+                <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+                  <h1 className="text-3xl font-bold text-gray-900 mb-6">Product Types</h1>
+                  <p className="text-lg text-gray-600 mb-12">
+                    Browse our collection of high-quality tiles by product type.
+                  </p>
+                  <div className="text-center py-16">
+                    <p className="text-gray-500">Product type listing will be implemented here.</p>
                   </div>
                 </div>
               </main>
@@ -321,4 +329,4 @@ function App() {
   );
 }
 
-export default App
+export default App;
