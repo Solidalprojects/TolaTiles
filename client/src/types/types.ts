@@ -151,6 +151,7 @@ export interface TeamMember {
 
 // New CustomerTestimonial interface
 export interface CustomerTestimonial {
+  image_url: any;
   id: number;
   customer_name: string;
   location?: string;
@@ -184,9 +185,9 @@ export enum ActiveTab {
   CONTACTS = 'contacts',
   SUBSCRIBERS = 'subscribers',
   SETTINGS = 'settings',
-  PRODUCT_TYPES = 'product_types', // New tab
-  TEAM = 'team', // New tab
-  TESTIMONIALS = 'testimonials', // New tab
+  PRODUCT_TYPES = 'product_types',
+  TEAM = 'team',
+  TESTIMONIALS = 'testimonials'
 }
 
 export interface ApiResponse<T> {
@@ -225,3 +226,4 @@ export interface FilterOptions {
   min_rating?: number;
   max_rating?: number;
 }
+

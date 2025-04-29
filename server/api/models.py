@@ -38,6 +38,7 @@ class TileCategory(models.Model):
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     description = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to='categories/', blank=True, null=True)
+    product_type = models.ForeignKey(ProductType, related_name='categories', on_delete=models.CASCADE, null=True)  # Link category to product type
     order = models.IntegerField(default=0)
     active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -46,7 +47,7 @@ class TileCategory(models.Model):
     class Meta:
         verbose_name = 'Tile Category'
         verbose_name_plural = 'Tile Categories'
-        ordering = ['order', 'name']
+        ordering = ['product_type', 'order', 'name']
     
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -54,7 +55,8 @@ class TileCategory(models.Model):
         super().save(*args, **kwargs)
     
     def __str__(self):
-        return self.name
+        product_type_name = self.product_type.name if self.product_type else "No Product Type"
+        return f"{self.name} ({product_type_name})"
     
     @property
     def image_url(self):
@@ -68,7 +70,7 @@ class Tile(models.Model):
     description = models.TextField(blank=True, null=True)
     category = models.ForeignKey(TileCategory, related_name='tiles', on_delete=models.CASCADE)
     product_type = models.ForeignKey(ProductType, related_name='tiles', on_delete=models.SET_NULL, null=True, blank=True)
-    featured = models.BooleanField(default=False)
+    # featured field removed
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
     size = models.CharField(max_length=100, blank=True, null=True)
     material = models.CharField(max_length=100, blank=True, null=True)
@@ -87,11 +89,15 @@ class Tile(models.Model):
             self.slug = slugify(self.title)
         if not self.sku:
             self.sku = f"TILE-{uuid.uuid4().hex[:8].upper()}"
+        
+        # If product_type is not set but category has a product_type, use that
+        if not self.product_type and self.category and self.category.product_type:
+            self.product_type = self.category.product_type
+            
         super().save(*args, **kwargs)
     
     def __str__(self):
         return self.title
-
 
 class TileImage(models.Model):
     tile = models.ForeignKey(Tile, related_name='images', on_delete=models.CASCADE)
@@ -114,6 +120,12 @@ class TileImage(models.Model):
         if self.is_primary:
             TileImage.objects.filter(tile=self.tile, is_primary=True).exclude(id=self.id).update(is_primary=False)
         super().save(*args, **kwargs)
+    
+    @property
+    def image_url(self):
+        if self.image:
+            return self.image.url
+        return None
 
 class TeamMember(models.Model):
     name = models.CharField(max_length=100)
@@ -155,7 +167,7 @@ class Project(models.Model):
     location = models.CharField(max_length=100)
     completed_date = models.DateField()
     status = models.CharField(max_length=20, choices=PROGRESS_CHOICES, default='completed')
-    featured = models.BooleanField(default=False)
+    # featured field removed
     tiles_used = models.ManyToManyField(Tile, related_name='projects', blank=True)
     product_type = models.ForeignKey(ProductType, related_name='projects', on_delete=models.SET_NULL, null=True, blank=True)
     area_size = models.CharField(max_length=100, blank=True, null=True)
@@ -184,6 +196,7 @@ class CustomerTestimonial(models.Model):
     testimonial = models.TextField()
     project = models.ForeignKey(Project, related_name='testimonials', on_delete=models.SET_NULL, null=True, blank=True)
     rating = models.IntegerField(choices=RATING_CHOICES, default=5)
+    image = models.ImageField(upload_to='testimonials/', blank=True, null=True)  # New field for customer image
     date = models.DateField(auto_now_add=True)
     approved = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -196,6 +209,12 @@ class CustomerTestimonial(models.Model):
     
     def __str__(self):
         return f"Testimonial by {self.customer_name}"
+        
+    @property
+    def image_url(self):
+        if self.image:
+            return self.image.url
+        return None
 
 class ProjectImage(models.Model):
     project = models.ForeignKey(Project, related_name='images', on_delete=models.CASCADE)
@@ -211,6 +230,18 @@ class ProjectImage(models.Model):
     
     def __str__(self):
         return f"Image for {self.project.title}"
+    
+    def save(self, *args, **kwargs):
+        # If this image is being set as primary, unset any existing primary
+        if self.is_primary:
+            ProjectImage.objects.filter(project=self.project, is_primary=True).exclude(id=self.id).update(is_primary=False)
+        super().save(*args, **kwargs)
+    
+    @property
+    def image_url(self):
+        if self.image:
+            return self.image.url
+        return None
 
 class Contact(models.Model):
     name = models.CharField(max_length=100)

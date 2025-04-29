@@ -1,5 +1,5 @@
 // client/src/components/Dashboard.tsx
-// Updated Dashboard component with improved authentication handling
+// Updated Dashboard component with Team and Testimonials management
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -8,6 +8,8 @@ import DashboardSidebar from './DashboardSidebar';
 import TileManager from './TileManager';
 import CategoryManager from './CategoryManager';
 import ProjectManager from './ProjectManager';
+import TeamManager from './TeamManager';
+import TestimonialsManager from './TestimonialsManager';
 import { ActiveTab } from '../types/types';
 
 const Dashboard = () => {
@@ -62,6 +64,10 @@ const Dashboard = () => {
         return <CategoryManager />;
       case ActiveTab.PROJECTS:
         return <ProjectManager />;
+      case ActiveTab.TEAM:
+        return <TeamManager />;
+      case ActiveTab.TESTIMONIALS:
+        return <TestimonialsManager />;
       default:
         return <TileManager />;
     }
@@ -87,6 +93,10 @@ const Dashboard = () => {
         return "Category Management";
       case ActiveTab.PROJECTS:
         return "Project Management";
+      case ActiveTab.TEAM:
+        return "Team Management";
+      case ActiveTab.TESTIMONIALS:
+        return "Testimonials Management";
       default:
         return "Dashboard";
     }

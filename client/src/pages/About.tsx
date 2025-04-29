@@ -45,18 +45,14 @@ const About = () => {
         // Fall back to mock data if service isn't implemented
       }
       
-      // Fetch testimonials
+      // Fetch testimonials - only approved ones
       try {
-        const testimonialsData = await testimonialService.getTestimonials({ approved: true });
+        const testimonialsData = await testimonialService.getApprovedTestimonials();
         setTestimonials(testimonialsData);
       } catch (error) {
         console.error('Error fetching testimonials:', error);
         // Fall back to mock data if service isn't implemented
-        setTestimonials([
-          { id: 1, customer_name: 'John Smith', testimonial: 'Tola Tiles transformed our kitchen with beautiful backsplash tiles. The quality and craftsmanship exceeded our expectations!', rating: 5, date: '2023-08-15', location: 'Dallas, TX', approved: true, created_at: '', updated_at: '' },
-          { id: 2, customer_name: 'Sarah Johnson', testimonial: 'We love our new bathroom tile. The team was professional and the result is stunning.', rating: 5, date: '2023-07-22', location: 'Austin, TX', approved: true, created_at: '', updated_at: '' },
-          { id: 3, customer_name: 'Michael Brown', testimonial: 'The fireplace renovation completely changed our living room. Excellent service from start to finish.', rating: 4, date: '2023-09-05', location: 'Houston, TX', approved: true, created_at: '', updated_at: '' },
-        ]);
+     
       }
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -107,6 +103,56 @@ const About = () => {
       return dateString || 'N/A';
     }
   };
+
+  // Render a single testimonial with image
+  const renderTestimonial = (testimonial: CustomerTestimonial) => (
+    <div 
+      key={testimonial.id} 
+      className="w-full px-4"
+      style={{ width: `${100 / testimonials.length}%` }}
+    >
+      <div className="bg-white rounded-lg p-8 md:p-10 shadow-lg">
+        <div className="flex justify-center mb-6">
+          {renderStarRating(testimonial.rating)}
+        </div>
+        
+        {/* Add testimonial image if available */}
+        {testimonial.image_url && (
+          <div className="flex justify-center mb-6">
+            <img 
+              src={testimonial.image_url} 
+              alt={`${testimonial.customer_name}`} 
+              className="w-24 h-24 object-cover rounded-full border-4 border-blue-100"
+              onError={(e) => {
+                const target = e.target as HTMLImageElement;
+                target.src = `https://via.placeholder.com/96?text=${testimonial.customer_name.charAt(0)}`;
+              }}
+            />
+          </div>
+        )}
+        
+        {/* If no image, show initial */}
+        {!testimonial.image_url && (
+          <div className="flex justify-center mb-6">
+            <div className="w-24 h-24 rounded-full bg-blue-100 flex items-center justify-center text-blue-500 text-2xl font-bold border-4 border-blue-50">
+              {testimonial.customer_name.charAt(0)}
+            </div>
+          </div>
+        )}
+        
+        <blockquote className="text-xl text-center text-gray-800 italic mb-6">
+          "{testimonial.testimonial}"
+        </blockquote>
+        <div className="text-center">
+          <p className="font-bold text-gray-900">{testimonial.customer_name}</p>
+          {testimonial.location && (
+            <p className="text-gray-600">{testimonial.location}</p>
+          )}
+          <p className="text-gray-500 text-sm mt-1">{formatDate(testimonial.date)}</p>
+        </div>
+      </div>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -272,29 +318,7 @@ const About = () => {
                 className="flex transition-transform duration-700 ease-in-out"
                 style={{ width: `${testimonials.length * 100}%` }}
               >
-                {testimonials.map((testimonial) => (
-                  <div 
-                    key={testimonial.id} 
-                    className="w-full px-4"
-                    style={{ width: `${100 / testimonials.length}%` }}
-                  >
-                    <div className="bg-white rounded-lg p-8 md:p-10 shadow-lg">
-                      <div className="flex justify-center mb-6">
-                        {renderStarRating(testimonial.rating)}
-                      </div>
-                      <blockquote className="text-xl text-center text-gray-800 italic mb-6">
-                        "{testimonial.testimonial}"
-                      </blockquote>
-                      <div className="text-center">
-                        <p className="font-bold text-gray-900">{testimonial.customer_name}</p>
-                        {testimonial.location && (
-                          <p className="text-gray-600">{testimonial.location}</p>
-                        )}
-                        <p className="text-gray-500 text-sm mt-1">{formatDate(testimonial.date)}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                {testimonials.map(testimonial => renderTestimonial(testimonial))}
               </div>
               
               {/* Carousel Controls */}

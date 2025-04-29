@@ -16,14 +16,16 @@ class UserSerializer(serializers.ModelSerializer):
 class ProductTypeSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     tiles_count = serializers.SerializerMethodField()
+    categories_count = serializers.SerializerMethodField()
     
     class Meta:
         model = ProductType
         fields = [
             'id', 'name', 'slug', 'description', 'image', 'image_url',
-            'display_order', 'active', 'created_at', 'updated_at', 'tiles_count'
+            'display_order', 'active', 'created_at', 'updated_at', 
+            'tiles_count', 'categories_count'
         ]
-        read_only_fields = ['id', 'slug', 'created_at', 'updated_at', 'tiles_count', 'image_url']
+        read_only_fields = ['id', 'slug', 'created_at', 'updated_at', 'tiles_count', 'image_url', 'categories_count']
     
     def get_image_url(self, obj):
         if obj.image:
@@ -32,17 +34,20 @@ class ProductTypeSerializer(serializers.ModelSerializer):
     
     def get_tiles_count(self, obj):
         return obj.tiles.count()
+    
+    def get_categories_count(self, obj):
+        return obj.categories.count()
 
 class ProductTypeDetailSerializer(ProductTypeSerializer):
-    """Serializer for detailed product type view with associated tiles"""
-    tiles = serializers.SerializerMethodField()
+    """Serializer for detailed product type view with associated categories and tiles"""
+    categories = serializers.SerializerMethodField()
     
     class Meta(ProductTypeSerializer.Meta):
-        fields = ProductTypeSerializer.Meta.fields + ['tiles']
+        fields = ProductTypeSerializer.Meta.fields + ['categories']
     
-    def get_tiles(self, obj):
-        tiles = obj.tiles.all()[:10]  # Limit to 10 tiles
-        return TileSerializer(tiles, many=True, context=self.context).data
+    def get_categories(self, obj):
+        categories = obj.categories.all()
+        return TileCategorySerializer(categories, many=True, context=self.context).data
 
 class TeamMemberSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
@@ -63,19 +68,25 @@ class TeamMemberSerializer(serializers.ModelSerializer):
 
 class CustomerTestimonialSerializer(serializers.ModelSerializer):
     project_title = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
     
     class Meta:
         model = CustomerTestimonial
         fields = [
             'id', 'customer_name', 'location', 'testimonial', 
             'project', 'project_title', 'rating', 'date', 
-            'approved', 'created_at', 'updated_at'
+            'image', 'image_url', 'approved', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'created_at', 'updated_at', 'project_title']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'project_title', 'image_url']
     
     def get_project_title(self, obj):
         if obj.project:
             return obj.project.title
+        return None
+        
+    def get_image_url(self, obj):
+        if obj.image:
+            return self.context['request'].build_absolute_uri(obj.image.url)
         return None
 
 class TileImageSerializer(serializers.ModelSerializer):
@@ -100,6 +111,44 @@ class TileImageSerializer(serializers.ModelSerializer):
             return self.context['request'].build_absolute_uri(obj.thumbnail.url)
         return self.get_image_url(obj) if obj.image else None
 
+class TileCategorySerializer(serializers.ModelSerializer):
+    tiles_count = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
+    product_type_name = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = TileCategory
+        fields = [
+            'id', 'name', 'slug', 'description', 'image', 'image_url',
+            'product_type', 'product_type_name', 'order', 'active', 
+            'created_at', 'updated_at', 'tiles_count'
+        ]
+        read_only_fields = ['id', 'slug', 'created_at', 'updated_at', 'tiles_count', 'image_url', 'product_type_name']
+    
+    def get_tiles_count(self, obj):
+        return obj.tiles.count()
+    
+    def get_image_url(self, obj):
+        if obj.image:
+            return self.context['request'].build_absolute_uri(obj.image.url)
+        return None
+        
+    def get_product_type_name(self, obj):
+        if obj.product_type:
+            return obj.product_type.name
+        return None
+
+class TileCategoryDetailSerializer(TileCategorySerializer):
+    """Serializer for detailed category view with associated tiles"""
+    tiles = serializers.SerializerMethodField()
+    
+    class Meta(TileCategorySerializer.Meta):
+        fields = TileCategorySerializer.Meta.fields + ['tiles']
+    
+    def get_tiles(self, obj):
+        tiles = obj.tiles.all()
+        return TileSerializer(tiles, many=True, context=self.context).data
+
 class TileSerializer(serializers.ModelSerializer):
     category_name = serializers.SerializerMethodField()
     product_type_name = serializers.SerializerMethodField()
@@ -112,7 +161,7 @@ class TileSerializer(serializers.ModelSerializer):
             'id', 'title', 'slug', 'description', 
             'category', 'category_name', 
             'product_type', 'product_type_name',
-            'featured', 'price', 'size', 'material', 'in_stock', 'sku',
+            'price', 'size', 'material', 'in_stock', 'sku',
             'created_at', 'updated_at', 'primary_image', 'images_count'
         ]
         read_only_fields = ['id', 'slug', 'sku', 'created_at', 'updated_at', 'primary_image', 'images_count']
@@ -142,33 +191,6 @@ class TileDetailSerializer(TileSerializer):
     class Meta(TileSerializer.Meta):
         fields = TileSerializer.Meta.fields + ['images']
 
-class TileCategorySerializer(serializers.ModelSerializer):
-    tiles_count = serializers.SerializerMethodField()
-    image_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = TileCategory
-        fields = [
-            'id', 'name', 'slug', 'description', 'image', 'image_url',
-            'order', 'active', 'created_at', 'updated_at', 'tiles_count'
-        ]
-        read_only_fields = ['id', 'slug', 'created_at', 'updated_at', 'tiles_count', 'image_url']
-    
-    def get_tiles_count(self, obj):
-        return obj.tiles.count()
-    
-    def get_image_url(self, obj):
-        if obj.image:
-            return self.context['request'].build_absolute_uri(obj.image.url)
-        return None
-
-class TileCategoryDetailSerializer(TileCategorySerializer):
-    """Serializer for detailed category view with associated tiles"""
-    tiles = TileSerializer(many=True, read_only=True)
-    
-    class Meta(TileCategorySerializer.Meta):
-        fields = TileCategorySerializer.Meta.fields + ['tiles']
-
 class ProjectImageSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     
@@ -193,7 +215,7 @@ class ProjectSerializer(serializers.ModelSerializer):
         model = Project
         fields = [
             'id', 'title', 'slug', 'description', 'client', 'location', 
-            'completed_date', 'status', 'status_display', 'featured', 
+            'completed_date', 'status', 'status_display', 
             'product_type', 'product_type_name',
             'area_size', 'testimonial', 'created_at', 'updated_at',
             'primary_image', 'images_count', 'testimonials_count'

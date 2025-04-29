@@ -3,7 +3,7 @@ from rest_framework import viewsets, permissions, status, filters
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from django.db.models import Q
@@ -37,17 +37,6 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
         return request.user and request.user.is_staff
-
-from rest_framework.decorators import api_view, permission_classes
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny
-from django.contrib.auth import authenticate
-from rest_framework.authtoken.models import Token
-import logging
-
-# Set up logger
-logger = logging.getLogger(__name__)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -98,7 +87,6 @@ def admin_login(request):
         return Response(response_data)
     else:
         # Check if user exists (helps with debugging)
-        from django.contrib.auth.models import User
         user_exists = User.objects.filter(username=username).exists()
         
         if user_exists:
@@ -112,10 +100,11 @@ def admin_login(request):
             {'error': error_message}, 
             status=status.HTTP_401_UNAUTHORIZED
         )
+
 @api_view(['POST'])
 def register_view(request):
     """
-    Register a new user and return JWT tokens.
+    Register a new user
     """
     serializer = UserSerializer(data=request.data)
     
@@ -133,12 +122,11 @@ def register_view(request):
         user.set_password(password)
         user.save()
         
-        # Generate tokens
-        refresh = RefreshToken.for_user(user)
+        # Generate token
+        token, _ = Token.objects.get_or_create(user=user)
         
         response_data = {
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
+            'token': token.key,
             'user': UserSerializer(user).data
         }
         
@@ -183,12 +171,11 @@ def change_password(request):
     user.set_password(new_password)
     user.save()
     
-    # Generate new tokens
-    refresh = RefreshToken.for_user(user)
+    # Generate new token
+    token, _ = Token.objects.get_or_create(user=user)
     
     response_data = {
-        'refresh': str(refresh),
-        'access': str(refresh.access_token),
+        'token': token.key,
         'message': 'Password changed successfully'
     }
     
@@ -417,12 +404,33 @@ class TileCategoryViewSet(viewsets.ModelViewSet):
         if active is not None:
             is_active = active.lower() == 'true'
             queryset = queryset.filter(active=is_active)
+            
+        # Filter by product type
+        product_type = self.request.query_params.get('product_type')
+        if product_type:
+            # Support both id and slug lookup
+            if product_type.isdigit():
+                queryset = queryset.filter(product_type_id=product_type)
+            else:
+                queryset = queryset.filter(product_type__slug=product_type)
         
-        return queryset.order_by('order', 'name')
+        return queryset.order_by('product_type', 'order', 'name')
     
     def get_serializer_context(self):
         context = super().get_serializer_context()
         return context
+        
+    def perform_create(self, serializer):
+        """Ensure category has proper product type when creating"""
+        product_type_id = self.request.data.get('product_type')
+        if product_type_id:
+            try:
+                product_type = ProductType.objects.get(id=product_type_id)
+                serializer.save(product_type=product_type)
+            except ProductType.DoesNotExist:
+                serializer.save()
+        else:
+            serializer.save()
 
 class TileImageViewSet(viewsets.ModelViewSet):
     """
@@ -534,13 +542,7 @@ class TileViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(category_id=category)
             else:
                 queryset = queryset.filter(category__slug=category)
-        
-        # Filter by featured status
-        featured = self.request.query_params.get('featured')
-        if featured is not None:
-            is_featured = featured.lower() == 'true'
-            queryset = queryset.filter(featured=is_featured)
-        
+                
         # Filter by in_stock status
         in_stock = self.request.query_params.get('in_stock')
         if in_stock is not None:
@@ -635,6 +637,48 @@ class TileViewSet(viewsets.ModelViewSet):
         
         return Response(serializer.data)
 
+class ProjectImageViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing Project Images.
+    """
+    queryset = ProjectImage.objects.all()
+    serializer_class = ProjectImageSerializer
+    permission_classes = [IsAdminOrReadOnly]
+    
+    def get_queryset(self):
+        queryset = ProjectImage.objects.all()
+        
+        # Filter by project if provided
+        project_id = self.request.query_params.get('project')
+        if project_id:
+            queryset = queryset.filter(project_id=project_id)
+        
+        # Filter by is_primary
+        is_primary = self.request.query_params.get('is_primary')
+        if is_primary is not None:
+            primary = is_primary.lower() == 'true'
+            queryset = queryset.filter(is_primary=primary)
+        
+        return queryset.order_by('-is_primary', 'created_at')
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        return context
+
+    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
+    def set_as_primary(self, request, pk=None):
+        """Set this image as primary for its parent project"""
+        image = self.get_object()
+        
+        # Set this image as primary
+        image.is_primary = True
+        image.save()
+        
+        # Ensure no other images for this project are primary
+        ProjectImage.objects.filter(project=image.project, is_primary=True).exclude(id=image.id).update(is_primary=False)
+        
+        return Response({'status': 'set as primary image'})
+
 class ProjectViewSet(viewsets.ModelViewSet):
     """
     ViewSet for viewing and editing Projects.
@@ -681,16 +725,19 @@ class ProjectViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = Project.objects.all()
         
-        # Filter by featured status
-        featured = self.request.query_params.get('featured')
-        if featured is not None:
-            is_featured = featured.lower() == 'true'
-            queryset = queryset.filter(featured=is_featured)
-        
         # Filter by status
         status_param = self.request.query_params.get('status')
         if status_param:
             queryset = queryset.filter(status=status_param)
+            
+        # Filter by product type
+        product_type = self.request.query_params.get('product_type')
+        if product_type:
+            # Support both id and slug lookup
+            if product_type.isdigit():
+                queryset = queryset.filter(product_type_id=product_type)
+            else:
+                queryset = queryset.filter(product_type__slug=product_type)
         
         # Filter by search term
         search = self.request.query_params.get('search')
@@ -778,48 +825,6 @@ class ProjectViewSet(viewsets.ModelViewSet):
         
         return Response(serializer.data)
 
-class ProjectImageViewSet(viewsets.ModelViewSet):
-    """
-    ViewSet for managing Project Images.
-    """
-    queryset = ProjectImage.objects.all()
-    serializer_class = ProjectImageSerializer
-    permission_classes = [IsAdminOrReadOnly]
-    
-    def get_queryset(self):
-        queryset = ProjectImage.objects.all()
-        
-        # Filter by project if provided
-        project_id = self.request.query_params.get('project')
-        if project_id:
-            queryset = queryset.filter(project_id=project_id)
-        
-        # Filter by is_primary
-        is_primary = self.request.query_params.get('is_primary')
-        if is_primary is not None:
-            primary = is_primary.lower() == 'true'
-            queryset = queryset.filter(is_primary=primary)
-        
-        return queryset.order_by('-is_primary', 'created_at')
-    
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        return context
-
-    @action(detail=True, methods=['post'], permission_classes=[IsAdminUser])
-    def set_as_primary(self, request, pk=None):
-        """Set this image as primary for its parent project"""
-        image = self.get_object()
-        
-        # Set this image as primary
-        image.is_primary = True
-        image.save()
-        
-        # Ensure no other images for this project are primary
-        ProjectImage.objects.filter(project=image.project, is_primary=True).exclude(id=image.id).update(is_primary=False)
-        
-        return Response({'status': 'set as primary image'})
-
 class ContactViewSet(viewsets.ModelViewSet):
     """
     ViewSet for handling contact form submissions.
@@ -849,7 +854,7 @@ class SubscriberViewSet(viewsets.ModelViewSet):
     serializer_class = SubscriberSerializer
     
     def get_permissions(self):
-        if self.action == 'create':
+        if self.action in ['create', 'subscribe', 'unsubscribe']:
             permission_classes = [AllowAny]
         else:
             permission_classes = [IsAdminUser]

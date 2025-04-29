@@ -13,6 +13,7 @@ import About from './pages/About'; // Import the About page component
 import Projects from './pages/Projects'; // Import the Projects page component
 import { isAuthenticated } from './services/auth';
 import './App.css';
+import ProductCategory from './pages/ProductCategory';
 
 // Protected route component with improved auth state management
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -274,6 +275,20 @@ function App() {
                     <p className="text-gray-500">Contact form will be implemented here.</p>
                   </div>
                 </div>
+              </main>
+              <Footer />
+            </>
+          }
+        />
+
+                {/* Product category routes */}
+                <Route
+          path="/products/:slug"
+          element={
+            <>
+              <Navbar />
+              <main className="min-h-screen bg-gray-50">
+                <ProductCategory />
               </main>
               <Footer />
             </>

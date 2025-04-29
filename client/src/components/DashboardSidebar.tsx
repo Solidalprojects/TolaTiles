@@ -3,6 +3,10 @@ import { useState, useEffect } from 'react';
 import { logout, getCurrentUser } from '../services/auth';
 import { useNavigate } from 'react-router-dom';
 import { ActiveTab } from '../types/types';
+import { 
+  Grid, Tag, Briefcase, Users, MessageSquare, 
+  LogOut, Menu, X
+} from 'lucide-react';
 
 interface DashboardSidebarProps {
   activeTab: ActiveTab;
@@ -31,29 +35,27 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
     {
       id: ActiveTab.TILES,
       label: 'Manage Tiles',
-      icon: (
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path>
-        </svg>
-      )
+      icon: <Grid size={20} className="mr-2" />
     },
     {
       id: ActiveTab.CATEGORIES,
       label: 'Manage Categories',
-      icon: (
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
-        </svg>
-      )
+      icon: <Tag size={20} className="mr-2" />
     },
     {
       id: ActiveTab.PROJECTS,
       label: 'Manage Projects',
-      icon: (
-        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-        </svg>
-      )
+      icon: <Briefcase size={20} className="mr-2" />
+    },
+    {
+      id: ActiveTab.TEAM,
+      label: 'Manage Team',
+      icon: <Users size={20} className="mr-2" />
+    },
+    {
+      id: ActiveTab.TESTIMONIALS,
+      label: 'Manage Testimonials',
+      icon: <MessageSquare size={20} className="mr-2" />
     }
   ];
 
@@ -89,9 +91,7 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
           onClick={handleLogout} 
           className="flex items-center justify-center w-full py-2 px-4 bg-red-600 hover:bg-red-700 rounded transition-colors text-white"
         >
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-          </svg>
+          <LogOut size={18} className="mr-2" />
           Logout
         </button>
       </div>
@@ -107,13 +107,9 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
         className="focus:outline-none"
       >
         {isMobileMenuOpen ? (
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
+          <X size={24} />
         ) : (
-          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+          <Menu size={24} />
         )}
       </button>
     </div>
@@ -152,9 +148,7 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
             onClick={handleLogout} 
             className="flex items-center justify-center w-full py-2 px-4 bg-red-600 hover:bg-red-700 rounded transition-colors text-white"
           >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-            </svg>
+            <LogOut size={18} className="mr-2" />
             Logout
           </button>
         </div>
