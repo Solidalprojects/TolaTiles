@@ -1,4 +1,4 @@
-// Updated App.tsx with About and Projects pages
+// Updated App.tsx with ProductCategoriesProvider
 
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect, JSX } from 'react';
@@ -9,11 +9,12 @@ import Dashboard from './components/Dashboard';
 import Login from './admin/Login';
 import TileDetail from './pages/TileDetail';
 import ProjectDetail from './pages/ProjectDetail';
-import About from './pages/About'; // Import the About page component
-import Projects from './pages/Projects'; // Import the Projects page component
+import About from './pages/About';
+import Projects from './pages/Projects';
 import { isAuthenticated } from './services/auth';
 import './App.css';
 import ProductCategory from './pages/ProductCategory';
+import { ProductCategoriesProvider } from './utils/productCategoriesContext';
 
 // Protected route component with improved auth state management
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -129,218 +130,198 @@ function App() {
   }
   
   return (
-    <Router>
-      <Routes>
-        {/* Public routes */}
-        <Route
-          path="/"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <Home />
-              </main>
-              <Footer />
-            </>
-          }
-        />
-        
-        {/* Tile Detail Routes */}
-        <Route
-          path="/tiles/:id"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <TileDetail />
-              </main>
-              <Footer />
-            </>
-          }
-        />
-        
-        <Route
-          path="/tiles/slug/:slug"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <TileDetail />
-              </main>
-              <Footer />
-            </>
-          }
-        />
-        
-        {/* Project Detail Routes */}
-        <Route
-          path="/projects/:id"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <ProjectDetail />
-              </main>
-              <Footer />
-            </>
-          }
-        />
-        
-        <Route
-          path="/projects/slug/:slug"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <ProjectDetail />
-              </main>
-              <Footer />
-            </>
-          }
-        />
-        
-        {/* Auth routes */}
-        <Route
-          path="/auth/login"
-          element={
-            <PublicOnlyRoute>
+    <ProductCategoriesProvider>
+      <Router>
+        <Routes>
+          {/* Public routes */}
+          <Route
+            path="/"
+            element={
               <>
                 <Navbar />
                 <main className="min-h-screen bg-gray-50">
-                  <Login />
+                  <Home />
                 </main>
                 <Footer />
               </>
-            </PublicOnlyRoute>
-          }
-        />
-        
-        {/* Protected routes */}
-        <Route
-          path="/auth/dashboard"
-          element={
-            <ProtectedRoute>
+            }
+          />
+          
+          {/* Tile Detail Routes */}
+          <Route
+            path="/tiles/:id"
+            element={
               <>
                 <Navbar />
                 <main className="min-h-screen bg-gray-50">
-                  <Dashboard />
+                  <TileDetail />
                 </main>
                 <Footer />
               </>
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* About Us Page with Testimonials and Team */}
-        <Route
-          path="/about"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <About />
-              </main>
-              <Footer />
-            </>
-          }
-        />
-        
-        {/* Projects listing page */}
-        <Route
-          path="/projects"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <Projects />
-              </main>
-              <Footer />
-            </>
-          }
-        />
-        
-        {/* Contact page */}
-        <Route
-          path="/contact"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-6">Contact Us</h1>
-                  <p className="text-lg text-gray-600 mb-12">
-                    Get in touch with our team for any inquiries or to schedule a consultation.
-                  </p>
-                  <div className="text-center py-16">
-                    <p className="text-gray-500">Contact form will be implemented here.</p>
+            }
+          />
+          
+          <Route
+            path="/tiles/slug/:slug"
+            element={
+              <>
+                <Navbar />
+                <main className="min-h-screen bg-gray-50">
+                  <TileDetail />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          
+          {/* Project Detail Routes */}
+          <Route
+            path="/projects/:id"
+            element={
+              <>
+                <Navbar />
+                <main className="min-h-screen bg-gray-50">
+                  <ProjectDetail />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          
+          <Route
+            path="/projects/slug/:slug"
+            element={
+              <>
+                <Navbar />
+                <main className="min-h-screen bg-gray-50">
+                  <ProjectDetail />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          
+          {/* Auth routes */}
+          <Route
+            path="/auth/login"
+            element={
+              <PublicOnlyRoute>
+                <>
+                  <Navbar />
+                  <main className="min-h-screen bg-gray-50">
+                    <Login />
+                  </main>
+                  <Footer />
+                </>
+              </PublicOnlyRoute>
+            }
+          />
+          
+          {/* Protected routes */}
+          <Route
+            path="/auth/dashboard"
+            element={
+              <ProtectedRoute>
+                <>
+                  <Navbar />
+                  <main className="min-h-screen bg-gray-50">
+                    <Dashboard />
+                  </main>
+                  <Footer />
+                </>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* About Us Page with Testimonials and Team */}
+          <Route
+            path="/about"
+            element={
+              <>
+                <Navbar />
+                <main className="min-h-screen bg-gray-50">
+                  <About />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          
+          {/* Projects listing page */}
+          <Route
+            path="/projects"
+            element={
+              <>
+                <Navbar />
+                <main className="min-h-screen bg-gray-50">
+                  <Projects />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          
+          {/* Contact page */}
+          <Route
+            path="/contact"
+            element={
+              <>
+                <Navbar />
+                <main className="min-h-screen bg-gray-50">
+                  <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+                    <h1 className="text-3xl font-bold text-gray-900 mb-6">Contact Us</h1>
+                    <p className="text-lg text-gray-600 mb-12">
+                      Get in touch with our team for any inquiries or to schedule a consultation.
+                    </p>
+                    <div className="text-center py-16">
+                      <p className="text-gray-500">Contact form will be implemented here.</p>
+                    </div>
                   </div>
-                </div>
-              </main>
-              <Footer />
-            </>
-          }
-        />
+                </main>
+                <Footer />
+              </>
+            }
+          />
 
-                {/* Product category routes */}
-                <Route
-          path="/products/:slug"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <ProductCategory />
-              </main>
-              <Footer />
-            </>
-          }
-        />
-        
-        {/* Product types routes */}
-        <Route
-          path="/products/:slug"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50">
-                <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-                  <h1 className="text-3xl font-bold text-gray-900 mb-6">Product Types</h1>
-                  <p className="text-lg text-gray-600 mb-12">
-                    Browse our collection of high-quality tiles by product type.
-                  </p>
-                  <div className="text-center py-16">
-                    <p className="text-gray-500">Product type listing will be implemented here.</p>
+          {/* Product category routes */}
+          <Route
+            path="/products/:slug"
+            element={
+              <>
+                <Navbar />
+                <main className="min-h-screen bg-gray-50">
+                  <ProductCategory />
+                </main>
+                <Footer />
+              </>
+            }
+          />
+          
+          {/* Catch-all route for 404 */}
+          <Route
+            path="*"
+            element={
+              <>
+                <Navbar />
+                <main className="min-h-screen bg-gray-50 flex items-center justify-center">
+                  <div className="text-center">
+                    <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
+                    <p className="text-xl text-gray-600 mb-8">Page not found</p>
+                    <Link 
+                      to="/"
+                      className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors"
+                    >
+                      Return Home
+                    </Link>
                   </div>
-                </div>
-              </main>
-              <Footer />
-            </>
-          }
-        />
-        
-        {/* Catch-all route for 404 */}
-        <Route
-          path="*"
-          element={
-            <>
-              <Navbar />
-              <main className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
-                  <p className="text-xl text-gray-600 mb-8">Page not found</p>
-                  <Link 
-                    to="/"
-                    className="bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition-colors"
-                  >
-                    Return Home
-                  </Link>
-                </div>
-              </main>
-              <Footer />
-            </>
-          }
-        />
-      </Routes>
-    </Router>
+                </main>
+                <Footer />
+              </>
+            }
+          />
+        </Routes>
+      </Router>
+    </ProductCategoriesProvider>
   );
 }
 

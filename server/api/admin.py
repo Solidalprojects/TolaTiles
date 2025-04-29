@@ -28,8 +28,9 @@ class TileCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Tile)
 class TileAdmin(admin.ModelAdmin):
-    list_display = ('title', 'category', 'product_type', 'featured', 'in_stock', 'created_at')
-    list_filter = ('category', 'product_type', 'featured', 'in_stock')
+    # Removed 'featured' from list_display and list_filter
+    list_display = ('title', 'category', 'product_type', 'in_stock', 'created_at')
+    list_filter = ('category', 'product_type', 'in_stock')
     search_fields = ('title', 'description', 'sku')
     prepopulated_fields = {'slug': ('title',)}
     autocomplete_fields = ['category', 'product_type']
@@ -61,8 +62,9 @@ class CustomerTestimonialInline(admin.TabularInline):
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ('title', 'client', 'location', 'completed_date', 'product_type', 'featured')
-    list_filter = ('featured', 'completed_date', 'product_type', 'status')
+    # Removed 'featured' from list_display and list_filter
+    list_display = ('title', 'client', 'location', 'completed_date', 'product_type')
+    list_filter = ('completed_date', 'product_type', 'status')
     search_fields = ('title', 'description', 'client', 'location')
     prepopulated_fields = {'slug': ('title',)}
     autocomplete_fields = ['product_type']
