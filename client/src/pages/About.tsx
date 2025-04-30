@@ -224,7 +224,7 @@ const About = () => {
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
-                    target.src = "https://via.placeholder.com/800x600?text=Tola+Tiles";
+                    target.src = "";
                   }}
                 />
               </div>

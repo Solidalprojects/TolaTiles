@@ -1,13 +1,84 @@
-// client/src/components/ProductTypeManager.tsx - Updated with logo selector
+// client/src/components/ProductTypeManager.tsx
 import { useState, useEffect } from 'react';
 import { ProductType } from '../types/types';
 import { productTypeService } from '../services/productTypeService';
 import { useProductTypes } from '../context/ProductCategoriesContext';
 import { 
   AlertCircle, Loader, Plus, X, Edit, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, 
-  Upload, Image as ImageIcon, LayoutGrid, Menu
+  Upload, Image as ImageIcon, LayoutGrid, Menu,
+  // Import common Lucide icons that might be used for product types
+  Grid, Box, Droplet, Flame, Home, BookOpen, Dribbble, Coffee, Compass,
+  Diamond, Award, Briefcase, Leaf, Layers, Palette, PaintBucket, Star, Zap,
+  SquarePen, FlowerIcon, Shapes,
 } from 'lucide-react';
 import { getStoredAuth } from '../services/auth';
+
+// Define available icons for product types
+const AVAILABLE_ICONS = [
+  { name: 'Grid', component: Grid },
+  { name: 'Box', component: Box },
+  { name: 'Droplet', component: Droplet },
+  { name: 'Flame', component: Flame },
+  { name: 'Home', component: Home },
+  { name: 'BookOpen', component: BookOpen },
+  { name: 'Dribbble', component: Dribbble },
+  { name: 'Coffee', component: Coffee },
+  { name: 'Compass', component: Compass },
+  { name: 'Diamond', component: Diamond },
+  { name: 'Award', component: Award },
+  { name: 'Briefcase', component: Briefcase },
+  { name: 'Leaf', component: Leaf },
+  { name: 'Layers', component: Layers },
+  { name: 'Palette', component: Palette },
+  { name: 'PaintBucket', component: PaintBucket },
+  { name: 'Star', component: Star },
+  { name: 'Zap', component: Zap },
+  { name: 'SquarePattern', component: SquarePen },
+  { name: 'FlowerIcon', component: FlowerIcon },
+  { name: 'Shapes', component: Shapes },
+];
+
+// Icon Picker Component
+const IconPicker = ({ 
+  selectedIcon, 
+  onSelectIcon 
+}: { 
+  selectedIcon: string, 
+  onSelectIcon: (iconName: string) => void 
+}) => {
+  return (
+    <div className="border border-gray-300 rounded-md p-4">
+      <h4 className="text-sm font-medium text-gray-700 mb-2">Select Navbar Icon</h4>
+      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-7 gap-2">
+        {AVAILABLE_ICONS.map((icon) => {
+          const IconComponent = icon.component;
+          return (
+            <button
+              key={icon.name}
+              type="button"
+              onClick={() => onSelectIcon(icon.name)}
+              className={`p-2 border rounded-md hover:bg-blue-50 transition-colors flex items-center justify-center ${
+                selectedIcon === icon.name ? 'bg-blue-100 border-blue-500' : 'border-gray-200'
+              }`}
+              title={icon.name}
+            >
+              <IconComponent size={20} />
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Helper to render icon by name
+const renderIconByName = (iconName: string, size = 24) => {
+  const icon = AVAILABLE_ICONS.find(i => i.name === iconName);
+  if (!icon) return <Box size={size} />;
+  
+  const IconComponent = icon.component;
+  return <IconComponent size={size} />;
+};
 
 const ProductTypeManager = () => {
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
@@ -19,15 +90,14 @@ const ProductTypeManager = () => {
     description: '',
     display_order: 0,
     active: true,
-    show_in_navbar: true, // Added field for navbar visibility
+    show_in_navbar: true,
+    icon_name: 'Grid', // Default icon
   });
   const [editingProductType, setEditingProductType] = useState<ProductType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [logoFile, setLogoFile] = useState<File | null>(null);  // New state for logo
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);  // New state for logo preview
   
   // Get the refresh function from context
   const { refreshProductTypes } = useProductTypes();
@@ -103,6 +173,10 @@ const ProductTypeManager = () => {
     }
   };
 
+  const handleIconSelect = (iconName: string) => {
+    setNewProductType(prev => ({ ...prev, icon_name: iconName }));
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
@@ -113,23 +187,6 @@ const ProductTypeManager = () => {
       reader.onload = (e) => {
         if (e.target && e.target.result) {
           setImagePreview(e.target.result as string);
-        }
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // New handler for logo file selection
-  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setLogoFile(file);
-      
-      // Create preview
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        if (e.target && e.target.result) {
-          setLogoPreview(e.target.result as string);
         }
       };
       reader.readAsDataURL(file);
@@ -157,11 +214,6 @@ const ProductTypeManager = () => {
       // Add image if available
       if (imageFile) {
         formData.append('image', imageFile);
-      }
-      
-      // Add logo if available
-      if (logoFile) {
-        formData.append('logo', logoFile);
       }
       
       if (editingProductType) {
@@ -235,6 +287,7 @@ const ProductTypeManager = () => {
       display_order: productType.display_order,
       active: productType.active,
       show_in_navbar: productType.show_in_navbar || true,
+      icon_name: productType.icon_name || 'Grid', // Use existing icon or default to Grid
     });
     
     // Set image preview if available
@@ -242,13 +295,6 @@ const ProductTypeManager = () => {
       setImagePreview(productType.image_url);
     } else {
       setImagePreview(null);
-    }
-    
-    // Set logo preview if available
-    if (productType.logo_url) {
-      setLogoPreview(productType.logo_url);
-    } else {
-      setLogoPreview(null);
     }
     
     setShowAddForm(true);
@@ -343,11 +389,10 @@ const ProductTypeManager = () => {
       display_order: productTypes.length + 1,
       active: true,
       show_in_navbar: true,
+      icon_name: 'Grid',
     });
     setImageFile(null);
     setImagePreview(null);
-    setLogoFile(null);
-    setLogoPreview(null);
   };
 
   return (
@@ -465,7 +510,7 @@ const ProductTypeManager = () => {
                 </p>
               </div>
               
-              {/* New Navbar Visibility Checkbox */}
+              {/* Navbar Visibility Checkbox */}
               <div className="flex items-center">
                 <input
                   type="checkbox"
@@ -497,6 +542,18 @@ const ProductTypeManager = () => {
                 />
               </div>
               
+              {/* Icon Picker */}
+              <div>
+                <label className="block text-gray-700 mb-2">Navbar Icon</label>
+                <IconPicker
+                  selectedIcon={newProductType.icon_name}
+                  onSelectIcon={handleIconSelect}
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  This icon will be displayed in the navigation menu
+                </p>
+              </div>
+              
               <div>
                 <label htmlFor="image" className="block text-gray-700 mb-2">
                   {editingProductType ? 'Cover Image (Leave empty to keep current)' : 'Cover Image'}
@@ -514,51 +571,29 @@ const ProductTypeManager = () => {
                 </p>
               </div>
               
-              {/* New Logo Upload Field */}
-              <div>
-                <label htmlFor="logo" className="block text-gray-700 mb-2">
-                  {editingProductType ? 'Navbar Logo (Leave empty to keep current)' : 'Navbar Logo'}
-                </label>
-                <input
-                  type="file"
-                  id="logo"
-                  name="logo"
-                  onChange={handleLogoFileChange}
-                  accept="image/*"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  This image will be displayed in the navigation menu. Use a small, simple icon (recommended size: 24x24px)
-                </p>
-              </div>
+              {/* Image Preview */}
+              {imagePreview && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-1">Cover Image Preview:</p>
+                  <div className="w-full h-32 border border-gray-300 rounded-md overflow-hidden">
+                    <img 
+                      src={imagePreview} 
+                      alt="Cover Preview" 
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </div>
+              )}
               
-              {/* Image and Logo Previews Side by Side */}
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                {imagePreview && (
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Cover Image Preview:</p>
-                    <div className="w-full h-32 border border-gray-300 rounded-md overflow-hidden">
-                      <img 
-                        src={imagePreview} 
-                        alt="Cover Preview" 
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+              {/* Icon Preview */}
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Selected Icon Preview:</p>
+                <div className="w-full h-24 border border-gray-300 rounded-md overflow-hidden bg-white flex justify-center items-center">
+                  <div className="flex flex-col items-center">
+                    {renderIconByName(newProductType.icon_name, 32)}
+                    <span className="text-sm text-gray-500 mt-2">{newProductType.icon_name}</span>
                   </div>
-                )}
-                
-                {logoPreview && (
-                  <div>
-                    <p className="text-sm text-gray-600 mb-1">Logo Preview:</p>
-                    <div className="w-full h-32 border border-gray-300 rounded-md overflow-hidden bg-gray-100 flex justify-center items-center">
-                      <img 
-                        src={logoPreview} 
-                        alt="Logo Preview" 
-                        className="max-w-[80%] max-h-[80%] object-contain"
-                      />
-                    </div>
-                  </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
@@ -647,25 +682,9 @@ const ProductTypeManager = () => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10 mr-3">
-                          {productType.logo_url ? (
-                            <img 
-                              className="h-10 w-10 rounded-full object-contain bg-gray-100 p-1" 
-                              src={productType.logo_url} 
-                              alt={`${productType.name} icon`} 
-                            />
-                          ) : (
-                            productType.image_url ? (
-                              <img 
-                                className="h-10 w-10 rounded-full object-cover" 
-                                src={productType.image_url} 
-                                alt={productType.name} 
-                              />
-                            ) : (
-                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                                <Menu size={20} className="text-blue-600" />
-                              </div>
-                            )
-                          )}
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                            {renderIconByName(productType.icon_name || 'Grid', 20)}
+                          </div>
                         </div>
                         <div>
                           <div className="text-sm font-medium text-gray-900">

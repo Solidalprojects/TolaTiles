@@ -41,11 +41,10 @@ export interface ProductType {
   description?: string;
   image?: string | File;
   image_url?: string;
-  logo?: string | File;  // New field for navbar icon
-  logo_url?: string;     // New field for navbar icon URL
+  icon_name?: string;  // New field for Lucide icon name
   display_order: number;
   active: boolean;
-  show_in_navbar?: boolean; // New field to control navbar visibility
+  show_in_navbar?: boolean;
   created_at: string;
   updated_at: string;
   tiles_count: number;

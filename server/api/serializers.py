@@ -13,6 +13,9 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_staff']
         read_only_fields = ['id', 'is_staff']
 
+from rest_framework import serializers
+from .models import ProductType
+
 class ProductTypeSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()
     tiles_count = serializers.SerializerMethodField()
@@ -22,8 +25,8 @@ class ProductTypeSerializer(serializers.ModelSerializer):
         model = ProductType
         fields = [
             'id', 'name', 'slug', 'description', 'image', 'image_url',
-            'display_order', 'active', 'created_at', 'updated_at', 
-            'tiles_count', 'categories_count'
+            'icon_name', 'display_order', 'active', 'show_in_navbar', 
+            'created_at', 'updated_at', 'tiles_count', 'categories_count'
         ]
         read_only_fields = ['id', 'slug', 'created_at', 'updated_at', 'tiles_count', 'image_url', 'categories_count']
     

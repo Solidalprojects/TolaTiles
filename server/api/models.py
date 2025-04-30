@@ -9,8 +9,10 @@ class ProductType(models.Model):
     slug = models.SlugField(max_length=120, unique=True, blank=True)
     description = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to='product_types/', blank=True, null=True)
+    icon_name = models.CharField(max_length=50, blank=True, null=True, default='Grid')  # Lucide icon name
     display_order = models.IntegerField(default=0)
     active = models.BooleanField(default=True)
+    show_in_navbar = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     

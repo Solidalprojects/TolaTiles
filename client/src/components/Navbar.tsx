@@ -1,14 +1,50 @@
-// components/Navbar.tsx - Updated to use ProductCategoriesContext and display logos
+// components/Navbar.tsx - Updated to use Lucide React icons from icon_name
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, isAuthenticated, isAdmin } from '../services/auth';
 import logo from '../assets/tolatiles.jpg';
 import { 
   Menu, X, LogOut, User, ChevronDown, Home, Grid, Briefcase, 
-  Settings, Phone, Flame, Droplet, Info, 
-  Home as HomeIcon, Grid as GridIcon
+  Settings, Phone, Info, 
+  // Import all Lucide icons that might be used for product types
+  Flame, Droplet, Box, BookOpen, Dribbble, Coffee, Compass,
+  Diamond, Award, Leaf, Layers, Palette, PaintBucket, Star, Zap,
+  SquarePen, FlowerIcon, Shapes, LayoutGrid
 } from 'lucide-react';
 import { useProductTypes, sortedProductTypes } from '../context/ProductCategoriesContext';
+
+// Helper to render icon by name
+const getIconByName = (iconName: string | undefined, size = 18) => {
+  // Default to Grid if no icon_name is provided
+  if (!iconName) return <Grid size={size} />;
+  
+  // Map icon_name to Lucide React component
+  switch (iconName) {
+    case 'Grid': return <Grid size={size} />;
+    case 'Box': return <Box size={size} />;
+    case 'Droplet': return <Droplet size={size} />;
+    case 'Flame': return <Flame size={size} />;
+    case 'Home': return <Home size={size} />;
+    case 'BookOpen': return <BookOpen size={size} />;
+    case 'Dribbble': return <Dribbble size={size} />;
+    case 'Coffee': return <Coffee size={size} />;
+    case 'Compass': return <Compass size={size} />;
+    case 'Diamond': return <Diamond size={size} />;
+    case 'Award': return <Award size={size} />;
+    case 'Briefcase': return <Briefcase size={size} />;
+    case 'Leaf': return <Leaf size={size} />;
+    case 'Layers': return <Layers size={size} />;
+    case 'Palette': return <Palette size={size} />;
+    case 'PaintBucket': return <PaintBucket size={size} />;
+    case 'Star': return <Star size={size} />;
+    case 'Zap': return <Zap size={size} />;
+    case 'SquarePattern': return <SquarePen size={size} />;
+    case 'FlowerIcon': return <FlowerIcon size={size} />;
+    case 'Shapes': return <Shapes size={size} />;
+    case 'LayoutGrid': return <LayoutGrid size={size} />;
+    default: return <Grid size={size} />; // Default fallback
+  }
+};
 
 const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -85,49 +121,6 @@ const Navbar = () => {
     };
   }, [isProductsMenuOpen, isProfileMenuOpen]);
 
-  // Helper to get the icon for a product type based on slug or logo
-  const getProductTypeIcon = (productType: any) => {
-    // If product type has a logo, use it
-    if (productType.logo_url) {
-      return (
-        <img 
-          src={productType.logo_url} 
-          alt={productType.name} 
-          className="w-5 h-5"
-          onError={(e) => {
-            // Fallback to default icons if image fails to load
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            renderDefaultIcon(productType.slug);
-          }}
-        />
-      );
-    }
-    
-    // Otherwise, render a default icon based on slug
-    return renderDefaultIcon(productType.slug);
-  };
-  
-  // Helper to render default icons based on slug
-  const renderDefaultIcon = (slug: string) => {
-    switch (slug) {
-      case 'tiles':
-        return <Grid size={18} />;
-      case 'backsplashes':
-        return <Grid size={18} />;
-      case 'fireplaces':
-        return <Flame size={18} />;
-      case 'flooring':
-        return <GridIcon size={18} />;
-      case 'patios':
-        return <HomeIcon size={18} />;
-      case 'showers':
-        return <Droplet size={18} />;
-      default:
-        return <Grid size={18} />;
-    }
-  };
-
   return (
     <nav className="bg-gradient-to-r from-blue-900 to-blue-700 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -195,7 +188,7 @@ const Navbar = () => {
                           onClick={() => setIsProductsMenuOpen(false)}
                         >
                           <span className="mr-2 w-5 h-5 flex items-center justify-center">
-                            {getProductTypeIcon(type)}
+                            {getIconByName(type.icon_name)}
                           </span>
                           {type.name}
                         </Link>
@@ -337,7 +330,7 @@ const Navbar = () => {
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           <span className="mr-2 w-5 h-5 flex items-center justify-center">
-                            {getProductTypeIcon(type)}
+                            {getIconByName(type.icon_name)}
                           </span>
                           {type.name}
                         </Link>

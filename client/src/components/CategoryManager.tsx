@@ -1,23 +1,29 @@
 // client/src/components/CategoryManager.tsx
-// Updated version with improved error handling and authentication
+// Fixed to handle proper type conversion for product_type
 
 import { useState, useEffect } from 'react';
-import { Category } from '../types/types';
+import { Category, ProductType } from '../types/types';
 import { categoryService } from '../services/api';
+import { productTypeService } from '../services/productTypeService';
 import { AlertCircle, Loader, Plus, X, Edit, Trash2 } from 'lucide-react';
 import { getStoredAuth } from '../services/auth';
 
 const CategoryManager = () => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [newCategory, setNewCategory] = useState({
     name: '',
     description: '',
+    product_type: '', // This will hold the ID as a string, but we'll convert it before sending
   });
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<string | null>(null);
+
+  // New filter state for filtering categories by product type in the display
+  const [filterProductType, setFilterProductType] = useState<string>('');
 
   useEffect(() => {
     checkAuthAndFetchData();
@@ -29,12 +35,27 @@ const CategoryManager = () => {
       const { token } = getStoredAuth();
       setAuthStatus(token ? `Token found (${token.substring(0, 5)}...)` : 'No token found');
       
-      // Proceed to fetch categories
+      // Fetch product types first
+      await fetchProductTypes();
+      
+      // Then fetch categories
       await fetchCategories();
     } catch (err) {
       console.error('Error during initial data fetch:', err);
       setError('Could not initialize data. Please check your connection and authentication status.');
       setLoading(false);
+    }
+  };
+
+  const fetchProductTypes = async () => {
+    try {
+      console.log('Fetching product types...');
+      const data = await productTypeService.getProductTypes();
+      console.log('Product types fetched successfully:', data.length);
+      setProductTypes(data);
+    } catch (err) {
+      console.error('Error fetching product types:', err);
+      setError('Failed to fetch product types. Please try again later.');
     }
   };
 
@@ -65,7 +86,7 @@ const CategoryManager = () => {
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setNewCategory({ ...newCategory, [name]: value });
   };
@@ -77,10 +98,28 @@ const CategoryManager = () => {
       setLoading(true);
       setError(null);
       
+      // Ensure product_type is valid
+      if (!newCategory.product_type) {
+        setError('Please select a product type for this category');
+        setLoading(false);
+        return;
+      }
+      
+      // Create a new object with proper types for the API
+      const categoryData: Partial<Category> = {
+        name: newCategory.name,
+        description: newCategory.description
+      };
+      
+      // Convert product_type to number if it's not empty
+      if (newCategory.product_type) {
+        categoryData.product_type = parseInt(newCategory.product_type);
+      }
+      
       if (editingCategory) {
-        await categoryService.updateCategory(editingCategory.id, newCategory);
+        await categoryService.updateCategory(editingCategory.id, categoryData);
       } else {
-        await categoryService.createCategory(newCategory);
+        await categoryService.createCategory(categoryData);
       }
       
       fetchCategories();
@@ -136,6 +175,7 @@ const CategoryManager = () => {
     setNewCategory({
       name: category.name,
       description: category.description || '',
+      product_type: category.product_type ? category.product_type.toString() : '',
     });
     setShowAddForm(true);
   };
@@ -146,7 +186,25 @@ const CategoryManager = () => {
     setNewCategory({
       name: '',
       description: '',
+      product_type: '',
     });
+  };
+
+  // Get filtered categories based on selected product type filter
+  const getFilteredCategories = () => {
+    if (!filterProductType) {
+      return categories;
+    }
+    return categories.filter(category => 
+      category.product_type && category.product_type.toString() === filterProductType
+    );
+  };
+
+  // Get product type name by ID
+  const getProductTypeName = (productTypeId?: number | null) => {
+    if (!productTypeId) return 'None';
+    const productType = productTypes.find(pt => pt.id === productTypeId);
+    return productType ? productType.name : 'Unknown';
   };
 
   return (
@@ -194,8 +252,32 @@ const CategoryManager = () => {
       {showAddForm && (
         <form onSubmit={handleSubmit} className="bg-gray-50 p-6 rounded-lg mb-6">
           <h3 className="text-xl font-semibold mb-4 text-gray-800">{editingCategory ? 'Edit Category' : 'Add New Category'}</h3>
+          
+          {/* Product Type Selection */}
           <div className="mb-4">
-            <label htmlFor="name" className="block text-gray-700 mb-2">Name</label>
+            <label htmlFor="product_type" className="block text-gray-700 mb-2">Product Type *</label>
+            <select
+              id="product_type"
+              name="product_type"
+              value={newCategory.product_type}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
+            >
+              <option value="">Select Product Type</option>
+              {productTypes.map((productType) => (
+                <option key={productType.id} value={productType.id.toString()}>
+                  {productType.name}
+                </option>
+              ))}
+            </select>
+            <p className="text-sm text-gray-500 mt-1">
+              The product type this category belongs to
+            </p>
+          </div>
+          
+          <div className="mb-4">
+            <label htmlFor="name" className="block text-gray-700 mb-2">Name *</label>
             <input
               type="text"
               id="name"
@@ -236,6 +318,36 @@ const CategoryManager = () => {
         </form>
       )}
 
+      {/* Filter by Product Type */}
+      {!showAddForm && (
+        <div className="mb-6">
+          <label htmlFor="filterProductType" className="block text-gray-700 mb-2">Filter by Product Type</label>
+          <div className="flex space-x-2">
+            <select
+              id="filterProductType"
+              value={filterProductType}
+              onChange={(e) => setFilterProductType(e.target.value)}
+              className="flex-grow px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Product Types</option>
+              {productTypes.map((productType) => (
+                <option key={productType.id} value={productType.id.toString()}>
+                  {productType.name}
+                </option>
+              ))}
+            </select>
+            {filterProductType && (
+              <button
+                onClick={() => setFilterProductType('')}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors"
+              >
+                Clear Filter
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {loading && !showAddForm ? (
         <div className="flex justify-center items-center p-12">
           <Loader size={24} className="animate-spin text-blue-600 mr-2" />
@@ -243,9 +355,13 @@ const CategoryManager = () => {
         </div>
       ) : (
         <div className="mt-6">
-          {categories.length === 0 ? (
+          {getFilteredCategories().length === 0 ? (
             <div className="text-center py-12 bg-gray-50 rounded-lg">
-              <p className="text-gray-500">No categories found. Add some!</p>
+              <p className="text-gray-500">
+                {filterProductType 
+                  ? 'No categories found for this product type. Add some!' 
+                  : 'No categories found. Add some!'}
+              </p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -254,6 +370,9 @@ const CategoryManager = () => {
                   <tr>
                     <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Name
+                    </th>
+                    <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Product Type
                     </th>
                     <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Description
@@ -267,10 +386,15 @@ const CategoryManager = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {categories.map((category) => (
+                  {getFilteredCategories().map((category) => (
                     <tr key={category.id} className="hover:bg-gray-50">
                       <td className="py-4 px-6 text-sm font-medium text-gray-900">
                         {category.name}
+                      </td>
+                      <td className="py-4 px-6 text-sm text-gray-700">
+                        <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                          {getProductTypeName(category.product_type)}
+                        </span>
                       </td>
                       <td className="py-4 px-6 text-sm text-gray-500">
                         {category.description || <span className="text-gray-400 italic">No description</span>}

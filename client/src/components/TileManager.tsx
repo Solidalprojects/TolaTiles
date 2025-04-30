@@ -1,4 +1,4 @@
-// client/src/components/TileManager.tsx - Updated with product type integration
+// client/src/components/TileManager.tsx - Fixed category filtering based on product type
 import { useState, useEffect } from 'react';
 import { Tile, Category, TileImage, ProductType } from '../types/types';
 import { tileService, categoryService } from '../services/api';
@@ -12,6 +12,7 @@ import { getStoredAuth } from '../services/auth';
 const TileManager = () => {
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
@@ -19,7 +20,7 @@ const TileManager = () => {
     title: '',
     description: '',
     category: '',
-    product_type: '', // Added product_type field
+    product_type: '',
     featured: false,
     price: '',
     size: '',
@@ -35,13 +36,31 @@ const TileManager = () => {
   const [editingTile, setEditingTile] = useState<Tile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('');
-  const [filterProductType, setFilterProductType] = useState<string>(''); // Added filter for product types
+  const [filterProductType, setFilterProductType] = useState<string>('');
   const [filterFeatured, setFilterFeatured] = useState<boolean | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    // Filter categories when product type changes
+    if (newTile.product_type) {
+      const filtered = categories.filter(
+        category => category.product_type?.toString() === newTile.product_type
+      );
+      setFilteredCategories(filtered);
+      
+      // If current selected category doesn't belong to the selected product type, reset it
+      if (newTile.category && !filtered.some(c => c.id.toString() === newTile.category)) {
+        setNewTile(prev => ({ ...prev, category: '' }));
+      }
+    } else {
+      // If no product type is selected, show all categories
+      setFilteredCategories(categories);
+    }
+  }, [newTile.product_type, categories]);
 
   const fetchData = async () => {
     try {
@@ -60,6 +79,7 @@ const TileManager = () => {
       // Fetch categories
       const categoriesData = await categoryService.getCategories();
       setCategories(categoriesData);
+      setFilteredCategories(categoriesData); // Initially show all categories
       
       // Fetch tiles with or without filters
       const filters = buildFilters();
@@ -76,7 +96,7 @@ const TileManager = () => {
   const buildFilters = () => {
     const filters: any = {};
     if (filterCategory) filters.category = filterCategory;
-    if (filterProductType) filters.product_type = filterProductType; // Add product type filter
+    if (filterProductType) filters.product_type = filterProductType;
     if (filterFeatured !== null) filters.featured = filterFeatured;
     if (searchTerm) filters.search = searchTerm;
     return filters;
@@ -88,7 +108,7 @@ const TileManager = () => {
 
   const resetFilters = () => {
     setFilterCategory('');
-    setFilterProductType(''); // Reset product type filter
+    setFilterProductType('');
     setFilterFeatured(null);
     setSearchTerm('');
     fetchData();
@@ -198,7 +218,7 @@ const TileManager = () => {
       title: tile.title,
       description: tile.description || '',
       category: tile.category.toString(),
-      product_type: tile.product_type ? tile.product_type.toString() : '', // Handle product type in edit mode
+      product_type: tile.product_type ? tile.product_type.toString() : '',
       featured: tile.featured,
       price: tile.price?.toString() || '',
       size: tile.size || '',
@@ -220,7 +240,7 @@ const TileManager = () => {
       title: '',
       description: '',
       category: '',
-      product_type: '', // Reset product type
+      product_type: '',
       featured: false,
       price: '',
       size: '',
@@ -230,6 +250,24 @@ const TileManager = () => {
     setTileImages([]);
     setImagePreviews([]);
     setPrimaryImageIndex(0);
+  };
+
+  // Format price to currency
+  const formatPrice = (price?: number | string | null) => {
+    if (price === undefined || price === null) {
+      return 'Price upon request';
+    }
+    
+    // Convert string to number if needed
+    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
+    
+    // Check if it's a valid number after conversion
+    if (typeof numPrice === 'number' && !isNaN(numPrice)) {
+      return `$${numPrice.toFixed(2)}`;
+    }
+    
+    // Fallback for any other case
+    return typeof price === 'string' ? price : 'Price upon request';
   };
 
   return (
@@ -285,23 +323,6 @@ const TileManager = () => {
               </div>
             </div>
             <div>
-              <label htmlFor="filterCategory" className="block text-gray-700 mb-1 text-sm">Category</label>
-              <select
-                id="filterCategory"
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All Categories</option>
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            {/* New Product Type Filter */}
-            <div>
               <label htmlFor="filterProductType" className="block text-gray-700 mb-1 text-sm">Product Type</label>
               <select
                 id="filterProductType"
@@ -313,6 +334,24 @@ const TileManager = () => {
                 {productTypes.map((productType) => (
                   <option key={productType.id} value={productType.id}>
                     {productType.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="filterCategory" className="block text-gray-700 mb-1 text-sm">Category</label>
+              <select
+                id="filterCategory"
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Categories</option>
+                {categories
+                  .filter(category => !filterProductType || category.product_type?.toString() === filterProductType)
+                  .map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
                   </option>
                 ))}
               </select>
@@ -373,7 +412,7 @@ const TileManager = () => {
                 />
               </div>
               
-              {/* Product Type field ADDED */}
+              {/* Product Type field */}
               <div>
                 <label htmlFor="product_type" className="block text-gray-700 mb-1">Product Type</label>
                 <select
@@ -403,15 +442,17 @@ const TileManager = () => {
                   required
                 >
                   <option value="">Select Category</option>
-                  {/* Filter categories by product type if one is selected */}
-                  {categories
-                    .filter(category => !newTile.product_type || category.product_type?.toString() === newTile.product_type)
-                    .map((category) => (
+                  {filteredCategories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
                   ))}
                 </select>
+                {newTile.product_type && filteredCategories.length === 0 && (
+                  <p className="mt-1 text-sm text-red-500">
+                    No categories found for this product type. Please create a category first.
+                  </p>
+                )}
               </div>
             </div>
             

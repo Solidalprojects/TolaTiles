@@ -1,4 +1,4 @@
-// client/src/pages/home.tsx
+// client/src/pages/home.tsx - Simplified carousel implementation
 import React, { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { Tile, ProductType, Project } from '../types/types';
@@ -16,29 +16,23 @@ const Home = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   
-  // State for carousels
+  // State for carousel
   const [activeTileIndex, setActiveTileIndex] = useState(0);
-  
-  // Refs for carousel handling
-  const tilesRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchData();
     
-    // Set up interval for rotating featured tiles
+    // Set up interval for auto-rotation
     const interval = setInterval(() => {
-      nextTile();
+      if (featuredTiles.length > 1) {
+        setActiveTileIndex(current => 
+          current === featuredTiles.length - 1 ? 0 : current + 1
+        );
+      }
     }, 5000);
     
     return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    // Update carousel positioning when active indices change
-    if (tilesRef.current && featuredTiles.length > 0) {
-      tilesRef.current.style.transform = `translateX(-${activeTileIndex * 100}%)`;
-    }
-  }, [activeTileIndex, featuredTiles]);
+  }, [featuredTiles.length]);
 
   const fetchData = async () => {
     try {
@@ -49,7 +43,7 @@ const Home = () => {
       const tilesData = await tileService.getTiles({ featured: true });
       setFeaturedTiles(tilesData.length > 0 ? tilesData : await tileService.getTiles());
       
-      // Fetch product types (you'll need to implement this service)
+      // Fetch product types
       try {
         const productTypesData = await productTypeService.getProductTypes();
         setProductTypes(productTypesData);
@@ -78,15 +72,15 @@ const Home = () => {
     }
   };
 
-  // Carousel navigation functions
+  // Simple carousel navigation functions
   const prevTile = () => {
-    setActiveTileIndex((current) => 
+    setActiveTileIndex(current => 
       current === 0 ? featuredTiles.length - 1 : current - 1
     );
   };
 
   const nextTile = () => {
-    setActiveTileIndex((current) => 
+    setActiveTileIndex(current => 
       current === featuredTiles.length - 1 ? 0 : current + 1
     );
   };
@@ -117,96 +111,96 @@ const Home = () => {
     );
   }
 
+  // Render just the active tile instead of all tiles
+  const activeTile = featuredTiles[activeTileIndex];
+
   return (
     <div className="home-container">
       {/* Hero Section with Featured Tile Carousel */}
-      <section className="relative bg-blue-800 text-white overflow-hidden">
-        <div className="relative h-[600px] overflow-hidden">
-          <div 
-            ref={tilesRef}
-            className="flex transition-transform duration-700 ease-in-out h-full"
-            style={{ width: `${featuredTiles.length * 100}%` }}
-          >
-            {featuredTiles.map((tile, index) => (
-              <div 
-                key={tile.id} 
-                className="relative w-full h-full"
-                style={{ width: `${100 / featuredTiles.length}%` }}
-              >
-                <div className="absolute inset-0 bg-black/30 z-10"></div>
-                {tile.primary_image ? (
-                  <img 
-                    src={formatImageUrl(tile.primary_image)}
-                    alt={tile.title}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = "https://via.placeholder.com/1200x600?text=Premium+Tiles";
-                    }}
-                  />
-                ) : (
-                  <div className="w-full h-full bg-blue-700 flex items-center justify-center">
-                    <span className="text-2xl">No image available</span>
-                  </div>
-                )}
-                <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-8">
-                  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <h1 className="text-4xl md:text-5xl font-bold mb-4">{tile.title}</h1>
-                    <p className="text-xl mb-8 max-w-2xl">
-                      {tile.description || 'Premium tile solutions for your space'}
-                    </p>
-                    <div className="flex space-x-4">
-                      <Link 
-                        to={`/tiles/${tile.id}`}
-                        className="bg-white text-blue-800 px-6 py-3 rounded-md font-semibold hover:bg-gray-100 transition"
-                      >
-                        View Details
-                      </Link>
-                      <Link 
-                        to="/contact" 
-                        className="border border-white px-6 py-3 rounded-md font-semibold hover:bg-white hover:text-blue-800 transition"
-                      >
-                        Request Quote
-                      </Link>
-                    </div>
+      <section className="relative bg-blue-800 text-white">
+        <div className="relative h-[600px]">
+          {featuredTiles.length > 0 ? (
+            <div className="h-full">
+              {/* Just render the active tile */}
+              <div className="absolute inset-0 bg-black/30 z-10"></div>
+              {activeTile.primary_image ? (
+                <img 
+                  src={formatImageUrl(activeTile.primary_image)}
+                  alt={activeTile.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = "https://via.placeholder.com/1200x600?text=Premium+Tiles";
+                  }}
+                />
+              ) : (
+                <div className="w-full h-full bg-blue-700 flex items-center justify-center">
+                  <span className="text-2xl">No image available</span>
+                </div>
+              )}
+
+              {/* Content */}
+              <div className="absolute bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-black/80 to-transparent p-8">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                  <h1 className="text-4xl md:text-5xl font-bold mb-4">{activeTile.title}</h1>
+                  <p className="text-xl mb-8 max-w-2xl">
+                    {activeTile.description || 'Premium tile solutions for your space'}
+                  </p>
+                  <div className="flex space-x-4">
+                    <Link 
+                      to={`/tiles/${activeTile.id}`}
+                      className="bg-white text-blue-800 px-6 py-3 rounded-md font-semibold hover:bg-gray-100 transition"
+                    >
+                      View Details
+                    </Link>
+                    <Link 
+                      to="/contact" 
+                      className="border border-white px-6 py-3 rounded-md font-semibold hover:bg-white hover:text-blue-800 transition"
+                    >
+                      Request Quote
+                    </Link>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-          
-          {/* Carousel Controls */}
-          {featuredTiles.length > 1 && (
-            <>
-              <button 
-                onClick={prevTile}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 rounded-full p-2 text-white transition-colors"
-                aria-label="Previous"
-              >
-                <ArrowLeft size={24} />
-              </button>
-              <button 
-                onClick={nextTile}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 rounded-full p-2 text-white transition-colors"
-                aria-label="Next"
-              >
-                <ArrowRight size={24} />
-              </button>
               
-              {/* Dots indicator */}
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2">
-                {featuredTiles.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setActiveTileIndex(index)}
-                    className={`w-3 h-3 rounded-full transition-colors ${
-                      index === activeTileIndex ? 'bg-white' : 'bg-white/50'
-                    }`}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
-                ))}
-              </div>
-            </>
+              {/* Carousel Controls */}
+              {featuredTiles.length > 1 && (
+                <>
+                  <button 
+                    onClick={prevTile}
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 rounded-full p-2 text-white transition-colors"
+                    aria-label="Previous"
+                  >
+                    <ArrowLeft size={24} />
+                  </button>
+                  <button 
+                    onClick={nextTile}
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 rounded-full p-2 text-white transition-colors"
+                    aria-label="Next"
+                  >
+                    <ArrowRight size={24} />
+                  </button>
+                  
+                  {/* Dots indicator */}
+                  <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 z-20 flex space-x-2">
+                    {featuredTiles.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setActiveTileIndex(index)}
+                        className={`w-3 h-3 rounded-full transition-colors ${
+                          index === activeTileIndex ? 'bg-white' : 'bg-white/50'
+                        }`}
+                        aria-label={`Go to slide ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-blue-800">
+              <p className="text-2xl">No featured tiles available</p>
+            </div>
           )}
         </div>
       </section>
