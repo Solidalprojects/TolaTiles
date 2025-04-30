@@ -1,14 +1,17 @@
-// client/src/pages/ProductCategory.tsx
+// client/src/pages/ProductCategory.tsx - Updated to use context
 import React, { useState, useEffect } from "react";
 import { useParams, Link } from 'react-router-dom';
 import { Tile } from '../types/types';
 import { tileService } from '../services/api';
 import { formatImageUrl } from '../utils/imageUtils';
-import productCategories, { getCategoryBySlug } from '../utils/productCategories';
+import { useProductTypes, getCategoryBySlug } from '../context/ProductCategoriesContext';
 import { ChevronRight, Search, Filter, X, AlertCircle } from 'lucide-react';
 
 const ProductCategory = () => {
   const { slug } = useParams<{ slug: string }>();
+  
+  // Get product types from context
+  const { productTypes, loading: loadingCategories, error: categoriesError } = useProductTypes();
   
   // State for tiles and filters
   const [tiles, setTiles] = useState<Tile[]>([]);
@@ -22,15 +25,18 @@ const ProductCategory = () => {
   const [priceRange, setPriceRange] = useState<{ min: number; max: number }>({ min: 0, max: 1000 });
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
   
-  // Get category details
-  const category = slug ? getCategoryBySlug(slug) : null;
+  // Get category details from context
+  const category = slug ? getCategoryBySlug(productTypes, slug) : null;
   
   // Unique materials for filter dropdown
   const [materials, setMaterials] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchTiles();
-  }, [slug]);
+    // Only fetch tiles when we have categories loaded or when slug changes
+    if (!loadingCategories) {
+      fetchTiles();
+    }
+  }, [loadingCategories, slug]);
 
   useEffect(() => {
     // Apply filters whenever filter states change
@@ -131,10 +137,28 @@ const ProductCategory = () => {
     return typeof price === 'string' ? price : 'Price upon request';
   };
 
-  if (loading) {
+  if (loadingCategories || loading) {
     return (
       <div className="flex justify-center items-center min-h-[50vh]">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
+  // Handle error from categories context
+  if (categoriesError) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-red-700">{categoriesError}</p>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

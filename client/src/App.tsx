@@ -1,4 +1,4 @@
-// Updated App.tsx with ProductCategoriesProvider
+// Updated App.tsx with ProductTypeProvider
 
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect, JSX } from 'react';
@@ -9,12 +9,13 @@ import Dashboard from './components/Dashboard';
 import Login from './admin/Login';
 import TileDetail from './pages/TileDetail';
 import ProjectDetail from './pages/ProjectDetail';
-import About from './pages/About';
-import Projects from './pages/Projects';
+import About from './pages/About'; // Import the About page component
+import Projects from './pages/Projects'; // Import the Projects page component
 import { isAuthenticated } from './services/auth';
 import './App.css';
 import ProductCategory from './pages/ProductCategory';
-import { ProductCategoriesProvider } from './utils/productCategoriesContext';
+// Import the ProductTypeProvider
+import ProductTypeProvider from './context/ProductCategoriesContext';
 
 // Protected route component with improved auth state management
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -130,7 +131,7 @@ function App() {
   }
   
   return (
-    <ProductCategoriesProvider>
+    <ProductTypeProvider>
       <Router>
         <Routes>
           {/* Public routes */}
@@ -321,7 +322,7 @@ function App() {
           />
         </Routes>
       </Router>
-    </ProductCategoriesProvider>
+    </ProductTypeProvider>
   );
 }
 

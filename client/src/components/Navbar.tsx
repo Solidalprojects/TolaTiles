@@ -1,4 +1,4 @@
-// components/Navbar.tsx
+// components/Navbar.tsx - Updated to use ProductCategoriesContext
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, isAuthenticated, isAdmin } from '../services/auth';
@@ -8,16 +8,7 @@ import {
   Settings, Phone, Flame, Droplet, Info, 
   Home as HomeIcon, Grid as GridIcon
 } from 'lucide-react';
-
-// Product types menu items
-const productTypes = [
-  { name: 'All Tiles', icon: <Grid size={18} />, path: '/products/tiles' },
-  { name: 'Backsplashes', icon: <Grid size={18} />, path: '/products/backsplashes' },
-  { name: 'Fireplaces', icon: <Flame size={18} />, path: '/products/fireplaces' },
-  { name: 'Flooring', icon: <GridIcon size={18} />, path: '/products/flooring' },
-  { name: 'Patios', icon: <HomeIcon size={18} />, path: '/products/patios' },
-  { name: 'Showers', icon: <Droplet size={18} />, path: '/products/showers' },
-];
+import { useProductTypes, sortedProductTypes } from '../context/ProductCategoriesContext';
 
 const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -28,6 +19,12 @@ const Navbar = () => {
   const [username, setUsername] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Get product types from context
+  const { productTypes, loading } = useProductTypes();
+  
+  // Get sorted product types
+  const sortedTypes = sortedProductTypes(productTypes);
 
   useEffect(() => {
     checkAuthStatus();
@@ -88,6 +85,26 @@ const Navbar = () => {
     };
   }, [isProductsMenuOpen, isProfileMenuOpen]);
 
+  // Helper to get the icon for a product type based on slug
+  const getProductTypeIcon = (slug: string) => {
+    switch (slug) {
+      case 'tiles':
+        return <Grid size={18} />;
+      case 'backsplashes':
+        return <Grid size={18} />;
+      case 'fireplaces':
+        return <Flame size={18} />;
+      case 'flooring':
+        return <GridIcon size={18} />;
+      case 'patios':
+        return <HomeIcon size={18} />;
+      case 'showers':
+        return <Droplet size={18} />;
+      default:
+        return <Grid size={18} />;
+    }
+  };
+
   return (
     <nav className="bg-gradient-to-r from-blue-900 to-blue-700 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -126,17 +143,37 @@ const Navbar = () => {
               
               {isProductsMenuOpen && (
                 <div className="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg py-1 z-20">
-                  {productTypes.map((item, index) => (
-                    <Link
-                      key={index}
-                      to={item.path}
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
-                      onClick={() => setIsProductsMenuOpen(false)}
-                    >
-                      <span className="mr-2">{item.icon}</span>
-                      {item.name}
-                    </Link>
-                  ))}
+                  {/* All Tiles option first */}
+                  <Link
+                    to="/products/tiles"
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    onClick={() => setIsProductsMenuOpen(false)}
+                  >
+                    <span className="mr-2"><Grid size={18} /></span>
+                    All Tiles
+                  </Link>
+                  
+                  {/* Divider */}
+                  <div className="border-t border-gray-100 my-1"></div>
+                  
+                  {/* Dynamically generated product type links */}
+                  {loading ? (
+                    <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
+                  ) : (
+                    sortedTypes
+                      .filter(type => type.slug !== 'tiles') // Exclude "All Tiles" since we already have it
+                      .map((type) => (
+                        <Link
+                          key={type.id}
+                          to={`/products/${type.slug}`}
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                          onClick={() => setIsProductsMenuOpen(false)}
+                        >
+                          <span className="mr-2">{getProductTypeIcon(type.slug)}</span>
+                          {type.name}
+                        </Link>
+                      ))
+                  )}
                 </div>
               )}
             </div>
@@ -247,17 +284,34 @@ const Navbar = () => {
               
               {isProductsMenuOpen && (
                 <div className="pl-6 mt-1 space-y-1 border-l border-blue-700 ml-4">
-                  {productTypes.map((item, index) => (
-                    <Link
-                      key={index}
-                      to={item.path}
-                      className="text-blue-200 hover:bg-blue-700 hover:text-white block px-3 py-2 rounded-md flex items-center"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                    >
-                      <span className="mr-2">{item.icon}</span>
-                      {item.name}
-                    </Link>
-                  ))}
+                  {/* All Tiles option first */}
+                  <Link
+                    to="/products/tiles"
+                    className="text-blue-200 hover:bg-blue-700 hover:text-white block px-3 py-2 rounded-md flex items-center"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <span className="mr-2"><Grid size={18} /></span>
+                    All Tiles
+                  </Link>
+                  
+                  {/* Dynamically generated product type links */}
+                  {loading ? (
+                    <div className="text-blue-200 px-3 py-2">Loading...</div>
+                  ) : (
+                    sortedTypes
+                      .filter(type => type.slug !== 'tiles') // Exclude "All Tiles" since we already have it
+                      .map((type) => (
+                        <Link
+                          key={type.id}
+                          to={`/products/${type.slug}`}
+                          className="text-blue-200 hover:bg-blue-700 hover:text-white block px-3 py-2 rounded-md flex items-center"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                          <span className="mr-2">{getProductTypeIcon(type.slug)}</span>
+                          {type.name}
+                        </Link>
+                      ))
+                  )}
                 </div>
               )}
             </div>
