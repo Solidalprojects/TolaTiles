@@ -39,7 +39,7 @@ export interface ProductType {
   name: string;
   slug: string;
   description?: string;
-  image?: string;
+  image?: string | File;
   image_url?: string;
   display_order: number;
   active: boolean;

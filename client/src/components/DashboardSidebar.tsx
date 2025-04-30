@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { ActiveTab } from '../types/types';
 import { 
   Grid, Tag, Briefcase, Users, MessageSquare, 
-  LogOut, Menu, X
+  LogOut, Menu, X, Box
 } from 'lucide-react';
 
 interface DashboardSidebarProps {
@@ -41,6 +41,11 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
       id: ActiveTab.CATEGORIES,
       label: 'Manage Categories',
       icon: <Tag size={20} className="mr-2" />
+    },
+    {
+      id: ActiveTab.PRODUCT_TYPES,
+      label: 'Manage Product Types',
+      icon: <Box size={20} className="mr-2" />
     },
     {
       id: ActiveTab.PROJECTS,

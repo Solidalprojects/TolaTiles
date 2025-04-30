@@ -1,7 +1,10 @@
-// client/src/contexts/ProductCategoriesContext.tsx
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+// client/src/context/ProductCategoriesContext.tsx
+import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { ProductType } from '../types/types';
 import { productTypeService } from '../services/productTypeService';
+import { API_ENDPOINTS } from '../api/api';
+import { apiClient } from '../api/header';
+import { getStoredAuth } from '../services/auth';
 
 // Define the context shape
 interface ProductTypeContextType {
@@ -31,16 +34,40 @@ export const ProductTypeProvider: React.FC<ProductTypeProviderProps> = ({ childr
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Function to fetch product types
-  const fetchProductTypes = async () => {
+  // Function to fetch product types with proper error handling
+  const fetchProductTypes = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const data = await productTypeService.getProductTypes({ active: true });
-      setProductTypes(data);
+      const { token } = getStoredAuth();
+      console.log('Fetching product types with token:', token ? 'Token exists' : 'No token');
+      
+      // First try to get data from API endpoint
+      try {
+        const data = await apiClient.get(API_ENDPOINTS.PRODUCT_TYPES.BASE, token || undefined);
+        console.log('Product types fetched successfully:', data);
+        
+        if (Array.isArray(data)) {
+          setProductTypes(data);
+          return;
+        }
+      } catch (apiError) {
+        console.error('Error fetching from API_ENDPOINTS:', apiError);
+        // Continue to fallback approach
+      }
+      
+      // Fallback to productTypeService if the first approach failed
+      try {
+        const data = await productTypeService.getProductTypes({ active: true });
+        console.log('Product types fetched through service:', data);
+        setProductTypes(data);
+      } catch (serviceError) {
+        console.error('Error fetching from productTypeService:', serviceError);
+        throw serviceError; // Re-throw to trigger fallback data
+      }
     } catch (err) {
-      console.error('Error fetching product types:', err);
+      console.error('All product type fetch attempts failed:', err);
       setError('Failed to load product types');
       
       // Provide fallback data if API fails
@@ -55,12 +82,12 @@ export const ProductTypeProvider: React.FC<ProductTypeProviderProps> = ({ childr
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   // Call fetchProductTypes on initial render
   useEffect(() => {
     fetchProductTypes();
-  }, []);
+  }, [fetchProductTypes]);
 
   // Context value object
   const value: ProductTypeContextType = {

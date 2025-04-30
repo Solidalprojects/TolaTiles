@@ -1,4 +1,4 @@
-// Updated App.tsx with ProductTypeProvider
+// Updated App.tsx with Contact component
 
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect, JSX } from 'react';
@@ -9,12 +9,12 @@ import Dashboard from './components/Dashboard';
 import Login from './admin/Login';
 import TileDetail from './pages/TileDetail';
 import ProjectDetail from './pages/ProjectDetail';
-import About from './pages/About'; // Import the About page component
-import Projects from './pages/Projects'; // Import the Projects page component
+import About from './pages/About';
+import Projects from './pages/Projects';
+import Contact from './pages/Contact'; // Import the Contact page component
 import { isAuthenticated } from './services/auth';
 import './App.css';
 import ProductCategory from './pages/ProductCategory';
-// Import the ProductTypeProvider
 import ProductTypeProvider from './context/ProductCategoriesContext';
 
 // Protected route component with improved auth state management
@@ -269,15 +269,7 @@ function App() {
               <>
                 <Navbar />
                 <main className="min-h-screen bg-gray-50">
-                  <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-                    <h1 className="text-3xl font-bold text-gray-900 mb-6">Contact Us</h1>
-                    <p className="text-lg text-gray-600 mb-12">
-                      Get in touch with our team for any inquiries or to schedule a consultation.
-                    </p>
-                    <div className="text-center py-16">
-                      <p className="text-gray-500">Contact form will be implemented here.</p>
-                    </div>
-                  </div>
+                  <Contact />
                 </main>
                 <Footer />
               </>

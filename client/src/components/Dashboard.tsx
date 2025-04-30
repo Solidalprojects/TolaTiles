@@ -1,5 +1,5 @@
 // client/src/components/Dashboard.tsx
-// Updated Dashboard component with Team and Testimonials management
+// Updated Dashboard component with ProductTypeManager
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +10,7 @@ import CategoryManager from './CategoryManager';
 import ProjectManager from './ProjectManager';
 import TeamManager from './TeamManager';
 import TestimonialsManager from './TestimonialsManager';
+import ProductTypeManager from './ProductTypeManager';
 import { ActiveTab } from '../types/types';
 
 const Dashboard = () => {
@@ -68,6 +69,8 @@ const Dashboard = () => {
         return <TeamManager />;
       case ActiveTab.TESTIMONIALS:
         return <TestimonialsManager />;
+      case ActiveTab.PRODUCT_TYPES:
+        return <ProductTypeManager />;
       default:
         return <TileManager />;
     }
@@ -97,6 +100,8 @@ const Dashboard = () => {
         return "Team Management";
       case ActiveTab.TESTIMONIALS:
         return "Testimonials Management";
+      case ActiveTab.PRODUCT_TYPES:
+        return "Product Type Management";
       default:
         return "Dashboard";
     }
