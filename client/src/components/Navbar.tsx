@@ -1,4 +1,4 @@
-// components/Navbar.tsx - Updated to use ProductCategoriesContext
+// components/Navbar.tsx - Updated to use ProductCategoriesContext and display logos
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, isAuthenticated, isAdmin } from '../services/auth';
@@ -23,8 +23,8 @@ const Navbar = () => {
   // Get product types from context
   const { productTypes, loading } = useProductTypes();
   
-  // Get sorted product types
-  const sortedTypes = sortedProductTypes(productTypes);
+  // Get sorted and filtered product types for navbar
+  const navbarProductTypes = sortedProductTypes(productTypes).filter(type => type.active && type.show_in_navbar);
 
   useEffect(() => {
     checkAuthStatus();
@@ -85,8 +85,31 @@ const Navbar = () => {
     };
   }, [isProductsMenuOpen, isProfileMenuOpen]);
 
-  // Helper to get the icon for a product type based on slug
-  const getProductTypeIcon = (slug: string) => {
+  // Helper to get the icon for a product type based on slug or logo
+  const getProductTypeIcon = (productType: any) => {
+    // If product type has a logo, use it
+    if (productType.logo_url) {
+      return (
+        <img 
+          src={productType.logo_url} 
+          alt={productType.name} 
+          className="w-5 h-5"
+          onError={(e) => {
+            // Fallback to default icons if image fails to load
+            const target = e.target as HTMLImageElement;
+            target.style.display = 'none';
+            renderDefaultIcon(productType.slug);
+          }}
+        />
+      );
+    }
+    
+    // Otherwise, render a default icon based on slug
+    return renderDefaultIcon(productType.slug);
+  };
+  
+  // Helper to render default icons based on slug
+  const renderDefaultIcon = (slug: string) => {
     switch (slug) {
       case 'tiles':
         return <Grid size={18} />;
@@ -149,7 +172,9 @@ const Navbar = () => {
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     onClick={() => setIsProductsMenuOpen(false)}
                   >
-                    <span className="mr-2"><Grid size={18} /></span>
+                    <span className="mr-2 w-5 h-5 flex items-center justify-center">
+                      <Grid size={18} />
+                    </span>
                     All Tiles
                   </Link>
                   
@@ -160,7 +185,7 @@ const Navbar = () => {
                   {loading ? (
                     <div className="px-4 py-2 text-sm text-gray-500">Loading...</div>
                   ) : (
-                    sortedTypes
+                    navbarProductTypes
                       .filter(type => type.slug !== 'tiles') // Exclude "All Tiles" since we already have it
                       .map((type) => (
                         <Link
@@ -169,7 +194,9 @@ const Navbar = () => {
                           className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                           onClick={() => setIsProductsMenuOpen(false)}
                         >
-                          <span className="mr-2">{getProductTypeIcon(type.slug)}</span>
+                          <span className="mr-2 w-5 h-5 flex items-center justify-center">
+                            {getProductTypeIcon(type)}
+                          </span>
                           {type.name}
                         </Link>
                       ))
@@ -290,7 +317,9 @@ const Navbar = () => {
                     className="text-blue-200 hover:bg-blue-700 hover:text-white block px-3 py-2 rounded-md flex items-center"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
-                    <span className="mr-2"><Grid size={18} /></span>
+                    <span className="mr-2 w-5 h-5 flex items-center justify-center">
+                      <Grid size={18} />
+                    </span>
                     All Tiles
                   </Link>
                   
@@ -298,7 +327,7 @@ const Navbar = () => {
                   {loading ? (
                     <div className="text-blue-200 px-3 py-2">Loading...</div>
                   ) : (
-                    sortedTypes
+                    navbarProductTypes
                       .filter(type => type.slug !== 'tiles') // Exclude "All Tiles" since we already have it
                       .map((type) => (
                         <Link
@@ -307,7 +336,9 @@ const Navbar = () => {
                           className="text-blue-200 hover:bg-blue-700 hover:text-white block px-3 py-2 rounded-md flex items-center"
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
-                          <span className="mr-2">{getProductTypeIcon(type.slug)}</span>
+                          <span className="mr-2 w-5 h-5 flex items-center justify-center">
+                            {getProductTypeIcon(type)}
+                          </span>
                           {type.name}
                         </Link>
                       ))

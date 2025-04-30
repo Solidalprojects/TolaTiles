@@ -1,21 +1,25 @@
-// client/src/components/TileManager.tsx
+// client/src/components/TileManager.tsx - Updated with product type integration
 import { useState, useEffect } from 'react';
-import { Tile, Category, TileImage } from '../types/types';
+import { Tile, Category, TileImage, ProductType } from '../types/types';
 import { tileService, categoryService } from '../services/api';
+import { productTypeService } from '../services/productTypeService';
 import { 
   AlertCircle, Loader, Plus, X, Edit, Trash2, 
   Star, Image as ImageIcon, Search, Filter, Camera
 } from 'lucide-react';
+import { getStoredAuth } from '../services/auth';
 
 const TileManager = () => {
   const [tiles, setTiles] = useState<Tile[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [newTile, setNewTile] = useState({
     title: '',
     description: '',
     category: '',
+    product_type: '', // Added product_type field
     featured: false,
     price: '',
     size: '',
@@ -31,6 +35,7 @@ const TileManager = () => {
   const [editingTile, setEditingTile] = useState<Tile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filterCategory, setFilterCategory] = useState<string>('');
+  const [filterProductType, setFilterProductType] = useState<string>(''); // Added filter for product types
   const [filterFeatured, setFilterFeatured] = useState<boolean | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
 
@@ -43,7 +48,16 @@ const TileManager = () => {
       setLoading(true);
       setError(null);
       
-      // Fetch categories first
+      // Fetch product types first
+      try {
+        const productTypesData = await productTypeService.getProductTypes();
+        setProductTypes(productTypesData);
+        console.log('Product types fetched:', productTypesData.length);
+      } catch (error) {
+        console.error('Error fetching product types:', error);
+      }
+      
+      // Fetch categories
       const categoriesData = await categoryService.getCategories();
       setCategories(categoriesData);
       
@@ -62,6 +76,7 @@ const TileManager = () => {
   const buildFilters = () => {
     const filters: any = {};
     if (filterCategory) filters.category = filterCategory;
+    if (filterProductType) filters.product_type = filterProductType; // Add product type filter
     if (filterFeatured !== null) filters.featured = filterFeatured;
     if (searchTerm) filters.search = searchTerm;
     return filters;
@@ -73,6 +88,7 @@ const TileManager = () => {
 
   const resetFilters = () => {
     setFilterCategory('');
+    setFilterProductType(''); // Reset product type filter
     setFilterFeatured(null);
     setSearchTerm('');
     fetchData();
@@ -182,6 +198,7 @@ const TileManager = () => {
       title: tile.title,
       description: tile.description || '',
       category: tile.category.toString(),
+      product_type: tile.product_type ? tile.product_type.toString() : '', // Handle product type in edit mode
       featured: tile.featured,
       price: tile.price?.toString() || '',
       size: tile.size || '',
@@ -203,6 +220,7 @@ const TileManager = () => {
       title: '',
       description: '',
       category: '',
+      product_type: '', // Reset product type
       featured: false,
       price: '',
       size: '',
@@ -251,7 +269,7 @@ const TileManager = () => {
 
       {!showAddForm && (
         <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label htmlFor="searchTerm" className="block text-gray-700 mb-1 text-sm">Search</label>
               <div className="relative">
@@ -282,9 +300,26 @@ const TileManager = () => {
                 ))}
               </select>
             </div>
+            {/* New Product Type Filter */}
+            <div>
+              <label htmlFor="filterProductType" className="block text-gray-700 mb-1 text-sm">Product Type</label>
+              <select
+                id="filterProductType"
+                value={filterProductType}
+                onChange={(e) => setFilterProductType(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Product Types</option>
+                {productTypes.map((productType) => (
+                  <option key={productType.id} value={productType.id}>
+                    {productType.name}
+                  </option>
+                ))}
+              </select>
+            </div>
             <div>
               <label htmlFor="filterFeatured" className="block text-gray-700 mb-1 text-sm">Featured Status</label>
-                              <select
+              <select
                 id="filterFeatured"
                 value={filterFeatured === null ? '' : filterFeatured.toString()}
                 onChange={(e) => {
@@ -337,6 +372,26 @@ const TileManager = () => {
                   required
                 />
               </div>
+              
+              {/* Product Type field ADDED */}
+              <div>
+                <label htmlFor="product_type" className="block text-gray-700 mb-1">Product Type</label>
+                <select
+                  id="product_type"
+                  name="product_type"
+                  value={newTile.product_type}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Select Product Type</option>
+                  {productTypes.map((productType) => (
+                    <option key={productType.id} value={productType.id}>
+                      {productType.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
               <div>
                 <label htmlFor="category" className="block text-gray-700 mb-1">Category</label>
                 <select
@@ -348,7 +403,10 @@ const TileManager = () => {
                   required
                 >
                   <option value="">Select Category</option>
-                  {categories.map((category) => (
+                  {/* Filter categories by product type if one is selected */}
+                  {categories
+                    .filter(category => !newTile.product_type || category.product_type?.toString() === newTile.product_type)
+                    .map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
                     </option>
@@ -578,9 +636,17 @@ const TileManager = () => {
                   <h3 className="font-semibold text-lg mb-1 truncate">{tile.title}</h3>
                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">{tile.description}</p>
                   <div className="flex items-center justify-between">
-                    <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                      {categories.find(c => c.id === tile.category)?.name || 'Uncategorized'}
-                    </span>
+                    <div className="flex flex-col space-y-1">
+                      <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                        {categories.find(c => c.id === tile.category)?.name || 'Uncategorized'}
+                      </span>
+                      {/* Show Product Type */}
+                      {tile.product_type && (
+                        <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded">
+                          {productTypes.find(pt => pt.id === tile.product_type)?.name || 'No Type'}
+                        </span>
+                      )}
+                    </div>
                     <div className="flex space-x-1">
                       <button 
                         onClick={() => handleEdit(tile)} 

@@ -1,9 +1,12 @@
-// client/src/components/ProductTypeManager.tsx
+// client/src/components/ProductTypeManager.tsx - Updated with logo selector
 import { useState, useEffect } from 'react';
 import { ProductType } from '../types/types';
 import { productTypeService } from '../services/productTypeService';
 import { useProductTypes } from '../context/ProductCategoriesContext';
-import { AlertCircle, Loader, Plus, X, Edit, Trash2, Eye, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
+import { 
+  AlertCircle, Loader, Plus, X, Edit, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, 
+  Upload, Image as ImageIcon, LayoutGrid, Menu
+} from 'lucide-react';
 import { getStoredAuth } from '../services/auth';
 
 const ProductTypeManager = () => {
@@ -16,12 +19,15 @@ const ProductTypeManager = () => {
     description: '',
     display_order: 0,
     active: true,
+    show_in_navbar: true, // Added field for navbar visibility
   });
   const [editingProductType, setEditingProductType] = useState<ProductType | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [authStatus, setAuthStatus] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);  // New state for logo
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);  // New state for logo preview
   
   // Get the refresh function from context
   const { refreshProductTypes } = useProductTypes();
@@ -113,6 +119,23 @@ const ProductTypeManager = () => {
     }
   };
 
+  // New handler for logo file selection
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setLogoFile(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target && e.target.result) {
+          setLogoPreview(e.target.result as string);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -123,15 +146,28 @@ const ProductTypeManager = () => {
       // Create data object with form data
       const productTypeData: any = { ...newProductType };
       
+      // Create FormData for file uploads
+      const formData = new FormData();
+      
+      // Add all form fields to FormData
+      Object.entries(newProductType).forEach(([key, value]) => {
+        formData.append(key, value.toString());
+      });
+      
       // Add image if available
       if (imageFile) {
-        productTypeData.image = imageFile;
+        formData.append('image', imageFile);
+      }
+      
+      // Add logo if available
+      if (logoFile) {
+        formData.append('logo', logoFile);
       }
       
       if (editingProductType) {
-        await productTypeService.updateProductType(editingProductType.id, productTypeData);
+        await productTypeService.updateProductType(editingProductType.id, formData);
       } else {
-        await productTypeService.createProductType(productTypeData);
+        await productTypeService.createProductType(formData);
       }
       
       // Refresh data
@@ -198,6 +234,7 @@ const ProductTypeManager = () => {
       description: productType.description || '',
       display_order: productType.display_order,
       active: productType.active,
+      show_in_navbar: productType.show_in_navbar || true,
     });
     
     // Set image preview if available
@@ -205,6 +242,13 @@ const ProductTypeManager = () => {
       setImagePreview(productType.image_url);
     } else {
       setImagePreview(null);
+    }
+    
+    // Set logo preview if available
+    if (productType.logo_url) {
+      setLogoPreview(productType.logo_url);
+    } else {
+      setLogoPreview(null);
     }
     
     setShowAddForm(true);
@@ -224,6 +268,25 @@ const ProductTypeManager = () => {
     } catch (err: any) {
       console.error('Error toggling active status:', err);
       setError('Failed to update product type status.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleNavbar = async (id: number, currentShowInNavbar: boolean) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Toggle navbar visibility
+      await productTypeService.updateProductType(id, { show_in_navbar: !currentShowInNavbar });
+      
+      // Refresh data
+      await fetchProductTypes();
+      await refreshProductTypes();
+    } catch (err: any) {
+      console.error('Error toggling navbar visibility:', err);
+      setError('Failed to update product type navbar visibility.');
     } finally {
       setLoading(false);
     }
@@ -279,9 +342,12 @@ const ProductTypeManager = () => {
       description: '',
       display_order: productTypes.length + 1,
       active: true,
+      show_in_navbar: true,
     });
     setImageFile(null);
     setImagePreview(null);
+    setLogoFile(null);
+    setLogoPreview(null);
   };
 
   return (
@@ -398,6 +464,24 @@ const ProductTypeManager = () => {
                   Inactive product types won't show up in menus
                 </p>
               </div>
+              
+              {/* New Navbar Visibility Checkbox */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="show_in_navbar"
+                  name="show_in_navbar"
+                  checked={newProductType.show_in_navbar}
+                  onChange={handleInputChange}
+                  className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                />
+                <label htmlFor="show_in_navbar" className="ml-2 block text-gray-700">
+                  Show in Navbar
+                </label>
+                <p className="text-xs text-gray-500 ml-2">
+                  Display this product type in the main navigation menu
+                </p>
+              </div>
             </div>
             
             <div className="space-y-4">
@@ -415,7 +499,7 @@ const ProductTypeManager = () => {
               
               <div>
                 <label htmlFor="image" className="block text-gray-700 mb-2">
-                  {editingProductType ? 'Image (Leave empty to keep current)' : 'Image'}
+                  {editingProductType ? 'Cover Image (Leave empty to keep current)' : 'Cover Image'}
                 </label>
                 <input
                   type="file"
@@ -425,20 +509,57 @@ const ProductTypeManager = () => {
                   accept="image/*"
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  This image will be used on product category pages and cards
+                </p>
               </div>
               
-              {imagePreview && (
-                <div className="mt-2">
-                  <p className="text-sm text-gray-600 mb-1">Image Preview:</p>
-                  <div className="w-48 h-32 border border-gray-300 rounded-md overflow-hidden">
-                    <img 
-                      src={imagePreview} 
-                      alt="Preview" 
-                      className="w-full h-full object-cover"
-                    />
+              {/* New Logo Upload Field */}
+              <div>
+                <label htmlFor="logo" className="block text-gray-700 mb-2">
+                  {editingProductType ? 'Navbar Logo (Leave empty to keep current)' : 'Navbar Logo'}
+                </label>
+                <input
+                  type="file"
+                  id="logo"
+                  name="logo"
+                  onChange={handleLogoFileChange}
+                  accept="image/*"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  This image will be displayed in the navigation menu. Use a small, simple icon (recommended size: 24x24px)
+                </p>
+              </div>
+              
+              {/* Image and Logo Previews Side by Side */}
+              <div className="grid grid-cols-2 gap-4 mt-2">
+                {imagePreview && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Cover Image Preview:</p>
+                    <div className="w-full h-32 border border-gray-300 rounded-md overflow-hidden">
+                      <img 
+                        src={imagePreview} 
+                        alt="Cover Preview" 
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+                
+                {logoPreview && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-1">Logo Preview:</p>
+                    <div className="w-full h-32 border border-gray-300 rounded-md overflow-hidden bg-gray-100 flex justify-center items-center">
+                      <img 
+                        src={logoPreview} 
+                        alt="Logo Preview" 
+                        className="max-w-[80%] max-h-[80%] object-contain"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
           
@@ -489,6 +610,9 @@ const ProductTypeManager = () => {
                     Status
                   </th>
                   <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Navbar
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Tiles
                   </th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -522,15 +646,27 @@ const ProductTypeManager = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        {productType.image_url && (
-                          <div className="flex-shrink-0 h-10 w-10 mr-3">
+                        <div className="flex-shrink-0 h-10 w-10 mr-3">
+                          {productType.logo_url ? (
                             <img 
-                              className="h-10 w-10 rounded-full object-cover" 
-                              src={productType.image_url} 
-                              alt={productType.name} 
+                              className="h-10 w-10 rounded-full object-contain bg-gray-100 p-1" 
+                              src={productType.logo_url} 
+                              alt={`${productType.name} icon`} 
                             />
-                          </div>
-                        )}
+                          ) : (
+                            productType.image_url ? (
+                              <img 
+                                className="h-10 w-10 rounded-full object-cover" 
+                                src={productType.image_url} 
+                                alt={productType.name} 
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Menu size={20} className="text-blue-600" />
+                              </div>
+                            )
+                          )}
+                        </div>
                         <div>
                           <div className="text-sm font-medium text-gray-900">
                             {productType.name}
@@ -556,6 +692,19 @@ const ProductTypeManager = () => {
                       }`}>
                         {productType.active ? 'Active' : 'Inactive'}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <button
+                        onClick={() => handleToggleNavbar(productType.id, productType.show_in_navbar || false)}
+                        className={`p-1 rounded ${
+                          productType.show_in_navbar 
+                            ? 'bg-blue-100 text-blue-800' 
+                            : 'bg-gray-100 text-gray-800'
+                        }`}
+                        title={productType.show_in_navbar ? 'Shown in navbar' : 'Hidden from navbar'}
+                      >
+                        <LayoutGrid size={16} />
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">
                       <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">

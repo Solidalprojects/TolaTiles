@@ -1,4 +1,4 @@
-// client/src/context/ProductCategoriesContext.tsx
+// client/src/context/ProductCategoriesContext.tsx - Updated with navbar visibility support
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { ProductType } from '../types/types';
 import { productTypeService } from '../services/productTypeService';
@@ -72,12 +72,12 @@ export const ProductTypeProvider: React.FC<ProductTypeProviderProps> = ({ childr
       
       // Provide fallback data if API fails
       setProductTypes([
-        { id: 1, name: 'All Tiles', slug: 'tiles', description: 'Browse our complete collection of premium quality tiles', image_url: '', active: true, display_order: 1, created_at: '', updated_at: '', tiles_count: 0 },
-        { id: 2, name: 'Backsplashes', slug: 'backsplashes', description: 'Beautiful backsplash options for your kitchen and bathroom', image_url: '', active: true, display_order: 2, created_at: '', updated_at: '', tiles_count: 0 },
-        { id: 3, name: 'Fireplaces', slug: 'fireplaces', description: 'Elegant fireplace tile solutions to add warmth to any room', image_url: '', active: true, display_order: 3, created_at: '', updated_at: '', tiles_count: 0 },
-        { id: 4, name: 'Flooring', slug: 'flooring', description: 'Durable and stylish flooring tiles for any space', image_url: '', active: true, display_order: 4, created_at: '', updated_at: '', tiles_count: 0 },
-        { id: 5, name: 'Patios', slug: 'patios', description: 'Outdoor patio tiles that withstand the elements', image_url: '', active: true, display_order: 5, created_at: '', updated_at: '', tiles_count: 0 },
-        { id: 6, name: 'Showers', slug: 'showers', description: 'Modern shower tiles that combine beauty and function', image_url: '', active: true, display_order: 6, created_at: '', updated_at: '', tiles_count: 0 },
+        { id: 1, name: 'All Tiles', slug: 'tiles', description: 'Browse our complete collection of premium quality tiles', image_url: '', active: true, display_order: 1, show_in_navbar: true, created_at: '', updated_at: '', tiles_count: 0 },
+        { id: 2, name: 'Backsplashes', slug: 'backsplashes', description: 'Beautiful backsplash options for your kitchen and bathroom', image_url: '', active: true, display_order: 2, show_in_navbar: true, created_at: '', updated_at: '', tiles_count: 0 },
+        { id: 3, name: 'Fireplaces', slug: 'fireplaces', description: 'Elegant fireplace tile solutions to add warmth to any room', image_url: '', active: true, display_order: 3, show_in_navbar: true, created_at: '', updated_at: '', tiles_count: 0 },
+        { id: 4, name: 'Flooring', slug: 'flooring', description: 'Durable and stylish flooring tiles for any space', image_url: '', active: true, display_order: 4, show_in_navbar: true, created_at: '', updated_at: '', tiles_count: 0 },
+        { id: 5, name: 'Patios', slug: 'patios', description: 'Outdoor patio tiles that withstand the elements', image_url: '', active: true, display_order: 5, show_in_navbar: true, created_at: '', updated_at: '', tiles_count: 0 },
+        { id: 6, name: 'Showers', slug: 'showers', description: 'Modern shower tiles that combine beauty and function', image_url: '', active: true, display_order: 6, show_in_navbar: true, created_at: '', updated_at: '', tiles_count: 0 },
       ]);
     } finally {
       setLoading(false);
@@ -114,6 +114,11 @@ export const getCategoryBySlug = (productTypes: ProductType[], slug: string): Pr
 // Sort product types by display_order
 export const sortedProductTypes = (productTypes: ProductType[]): ProductType[] => {
   return [...productTypes].sort((a, b) => a.display_order - b.display_order);
+};
+
+// Get only product types that should appear in the navbar
+export const getNavbarProductTypes = (productTypes: ProductType[]): ProductType[] => {
+  return sortedProductTypes(productTypes).filter(type => type.active && type.show_in_navbar);
 };
 
 // Export the provider as default

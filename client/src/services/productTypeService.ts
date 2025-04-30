@@ -1,4 +1,4 @@
-// client/src/services/productTypeService.ts
+// client/src/services/productTypeService.ts - Updated to handle logo field
 import { apiClient } from '../api/header';
 import { API_ENDPOINTS } from '../api/api';
 import { getStoredAuth } from './auth';
@@ -67,35 +67,23 @@ export const productTypeService = {
     }
   },
 
-  createProductType: async (data: Partial<ProductType>): Promise<ProductType> => {
+  createProductType: async (formData: FormData | Partial<ProductType>): Promise<ProductType> => {
     try {
       const token = getAuthToken();
       if (!token) {
         throw new Error('Authentication required to create product types');
       }
       
-      // Use FormData if we have an image, otherwise use JSON
-      if (data.image instanceof File) {
-        const formData = new FormData();
-        
-        // Add all other fields to formData
-        Object.entries(data).forEach(([key, value]) => {
-          if (key !== 'image' && value !== undefined) {
-            formData.append(key, value.toString());
-          }
-        });
-        
-        // Add the image
-        formData.append('image', data.image);
-        
-        // Use axios directly for FormData
+      // Check if we received FormData or plain object
+      if (formData instanceof FormData) {
+        // Use axios directly for FormData to handle file uploads
         const response = await axios.post(
           API_ENDPOINTS.PRODUCT_TYPES.BASE,
           formData,
           {
             headers: {
               'Authorization': `Token ${token}`,
-              // Don't set Content-Type, let axios set it with the boundary
+              // Don't set Content-Type, let axios set it with the boundary for FormData
             }
           }
         );
@@ -103,7 +91,7 @@ export const productTypeService = {
         return response.data;
       } else {
         // Use regular JSON approach
-        const response = await apiClient.post(API_ENDPOINTS.PRODUCT_TYPES.BASE, data, token);
+        const response = await apiClient.post(API_ENDPOINTS.PRODUCT_TYPES.BASE, formData, token);
         return response;
       }
     } catch (error) {
@@ -112,42 +100,30 @@ export const productTypeService = {
     }
   },
 
-  updateProductType: async (id: number, data: Partial<ProductType>): Promise<ProductType> => {
+  updateProductType: async (id: number, data: FormData | Partial<ProductType>): Promise<ProductType> => {
     try {
       const token = getAuthToken();
       if (!token) {
         throw new Error('Authentication required to update product types');
       }
       
-      // Use FormData if we have an image, otherwise use JSON
-      if (data.image instanceof File) {
-        const formData = new FormData();
-        
-        // Add all other fields to formData
-        Object.entries(data).forEach(([key, value]) => {
-          if (key !== 'image' && value !== undefined) {
-            formData.append(key, value.toString());
-          }
-        });
-        
-        // Add the image
-        formData.append('image', data.image);
-        
-        // Use axios directly for FormData
+      // Check if we received FormData or plain object
+      if (data instanceof FormData) {
+        // Use axios directly for FormData to handle file uploads
         const response = await axios.patch(
           API_ENDPOINTS.PRODUCT_TYPES.DETAIL(id),
-          formData,
+          data,
           {
             headers: {
               'Authorization': `Token ${token}`,
-              // Don't set Content-Type, let axios set it with the boundary
+              // Don't set Content-Type, let axios set it with the boundary for FormData
             }
           }
         );
         
         return response.data;
       } else {
-        // Use regular JSON approach
+        // Use regular JSON approach for simple object updates
         const response = await apiClient.patch(API_ENDPOINTS.PRODUCT_TYPES.DETAIL(id), data, token);
         return response;
       }
@@ -177,6 +153,27 @@ export const productTypeService = {
    */
   getActiveProductTypes: async (): Promise<ProductType[]> => {
     return productTypeService.getProductTypes({ active: true });
+  },
+  
+  /**
+   * Get only product types that should appear in the navbar
+   */
+  getNavbarProductTypes: async (): Promise<ProductType[]> => {
+    return productTypeService.getProductTypes({ active: true, show_in_navbar: true });
+  },
+  
+  /**
+   * Set a product type's navbar visibility
+   */
+  setNavbarVisibility: async (id: number, showInNavbar: boolean): Promise<ProductType> => {
+    return productTypeService.updateProductType(id, { show_in_navbar: showInNavbar });
+  },
+  
+  /**
+   * Toggle a product type's active status
+   */
+  toggleActive: async (id: number, active: boolean): Promise<ProductType> => {
+    return productTypeService.updateProductType(id, { active });
   },
   
   /**

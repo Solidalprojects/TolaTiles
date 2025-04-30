@@ -1,4 +1,4 @@
-// client/src/types/types.ts - Extended with new types
+// client/src/types/types.ts - Extended with new types and fields for ProductType
 export interface User {
   id: number;
   username: string;
@@ -33,7 +33,7 @@ export interface PasswordChangeCredentials {
   confirm_password: string;
 }
 
-// New ProductType interface
+// Updated ProductType interface with logo fields
 export interface ProductType {
   id: number;
   name: string;
@@ -41,12 +41,17 @@ export interface ProductType {
   description?: string;
   image?: string | File;
   image_url?: string;
+  logo?: string | File;  // New field for navbar icon
+  logo_url?: string;     // New field for navbar icon URL
   display_order: number;
   active: boolean;
+  show_in_navbar?: boolean; // New field to control navbar visibility
   created_at: string;
   updated_at: string;
   tiles_count: number;
   tiles?: Tile[];
+  categories_count?: number;
+  categories?: Category[];
 }
 
 export interface Category {
@@ -56,6 +61,8 @@ export interface Category {
   description?: string;
   image?: string;
   image_url?: string;
+  product_type?: number; // Reference to the product type
+  product_type_name?: string; // Name of the product type
   order: number;
   active: boolean;
   created_at: string;
@@ -83,8 +90,8 @@ export interface Tile {
   description: string;
   category: number;
   category_name?: string;
-  product_type?: number; // New field
-  product_type_name?: string; // New field
+  product_type?: number; // Reference to product type
+  product_type_name?: string; // Name of the product type
   featured: boolean;
   price?: number;
   size?: string;
@@ -120,8 +127,8 @@ export interface Project {
   status: string;
   status_display: string;
   featured: boolean;
-  product_type?: number; // New field
-  product_type_name?: string; // New field
+  product_type?: number; // Reference to product type
+  product_type_name?: string; // Name of the product type
   area_size?: string;
   testimonial?: string;
   created_at: string;
@@ -130,10 +137,9 @@ export interface Project {
   images_count: number;
   images?: ProjectImage[];
   tiles_used?: Tile[];
-  testimonials?: CustomerTestimonial[]; // New field
+  testimonials?: CustomerTestimonial[];
 }
 
-// New TeamMember interface
 export interface TeamMember {
   id: number;
   name: string;
@@ -149,7 +155,6 @@ export interface TeamMember {
   updated_at: string;
 }
 
-// New CustomerTestimonial interface
 export interface CustomerTestimonial {
   image_url: any;
   id: number;
@@ -225,5 +230,5 @@ export interface FilterOptions {
   project?: number;
   min_rating?: number;
   max_rating?: number;
+  show_in_navbar?: boolean; // Added for product types filtering
 }
-
