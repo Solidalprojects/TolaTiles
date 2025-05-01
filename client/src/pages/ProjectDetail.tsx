@@ -1,7 +1,7 @@
 // client/src/pages/ProjectDetail.tsx (continued from previous part)
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Project, ProjectImage, Tile } from '../types/types';
+import { Project, Tile } from '../types/types';
 import { projectService, tileService } from '../services/api';
 import { formatImageUrl } from '../utils/imageUtils';
 import { 

@@ -1,7 +1,7 @@
 // components/Navbar.tsx - Updated to use Lucide React icons from icon_name
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { getCurrentUser, logout, isAuthenticated, isAdmin } from '../services/auth';
+import { getCurrentUser, logout, isAuthenticated } from '../services/auth';
 import logo from '../assets/tolatiles.jpg';
 import { 
   Menu, X, LogOut, User, ChevronDown, Home, Grid, Briefcase, 
@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useProductTypes, sortedProductTypes } from '../context/ProductCategoriesContext';
 
-// Helper to render icon by name
+// Helper to render icon by name - Fixed TypeScript type for iconName
 const getIconByName = (iconName: string | undefined, size = 18) => {
   // Default to Grid if no icon_name is provided
   if (!iconName) return <Grid size={size} />;
@@ -48,7 +48,7 @@ const getIconByName = (iconName: string | undefined, size = 18) => {
 
 const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isAdminUser, setIsAdminUser] = useState(false);
+  // Remove unused isAdminUser state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isProductsMenuOpen, setIsProductsMenuOpen] = useState(false);
@@ -60,7 +60,10 @@ const Navbar = () => {
   const { productTypes, loading } = useProductTypes();
   
   // Get sorted and filtered product types for navbar
-  const navbarProductTypes = sortedProductTypes(productTypes).filter(type => type.active && type.show_in_navbar);
+  // Add null check to handle possible undefined productTypes
+  const navbarProductTypes = productTypes ? 
+    sortedProductTypes(productTypes).filter(type => type.active && type.show_in_navbar) :
+    [];
 
   useEffect(() => {
     checkAuthStatus();
@@ -69,7 +72,9 @@ const Navbar = () => {
   const checkAuthStatus = () => {
     const authenticated = isAuthenticated();
     setIsLoggedIn(authenticated);
-    setIsAdminUser(isAdmin());
+    
+    // Only check admin status if we need to use it
+    // const isAdminUser = isAdmin();
     
     if (authenticated) {
       const userData = getCurrentUser();
@@ -80,7 +85,6 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     setIsLoggedIn(false);
-    setIsAdminUser(false);
     setIsProfileMenuOpen(false);
     navigate('/auth/login');
   };
@@ -162,7 +166,7 @@ const Navbar = () => {
                   {/* All Tiles option first */}
                   <Link
                     to="/products/tiles"
-                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                    className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     onClick={() => setIsProductsMenuOpen(false)}
                   >
                     <span className="mr-2 w-5 h-5 flex items-center justify-center">
@@ -184,7 +188,7 @@ const Navbar = () => {
                         <Link
                           key={type.id}
                           to={`/products/${type.slug}`}
-                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                          className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                           onClick={() => setIsProductsMenuOpen(false)}
                         >
                           <span className="mr-2 w-5 h-5 flex items-center justify-center">
@@ -231,7 +235,7 @@ const Navbar = () => {
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-20">
                     <Link 
                       to="/auth/dashboard" 
-                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
                       <Settings size={16} className="mr-2" />
@@ -239,7 +243,7 @@ const Navbar = () => {
                     </Link>
                     <button
                       onClick={handleLogout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
+                      className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center"
                     >
                       <LogOut size={16} className="mr-2" />
                       Sign out
@@ -279,7 +283,7 @@ const Navbar = () => {
           <div className="px-2 pt-2 pb-3 space-y-1">
             <Link 
               to="/" 
-              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
+              className="text-white hover:bg-blue-700 px-3 py-2 rounded-md flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Home size={18} className="mr-2" />
@@ -307,7 +311,7 @@ const Navbar = () => {
                   {/* All Tiles option first */}
                   <Link
                     to="/products/tiles"
-                    className="text-blue-200 hover:bg-blue-700 hover:text-white block px-3 py-2 rounded-md flex items-center"
+                    className="text-blue-200 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md flex items-center"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     <span className="mr-2 w-5 h-5 flex items-center justify-center">
@@ -326,7 +330,7 @@ const Navbar = () => {
                         <Link
                           key={type.id}
                           to={`/products/${type.slug}`}
-                          className="text-blue-200 hover:bg-blue-700 hover:text-white block px-3 py-2 rounded-md flex items-center"
+                          className="text-blue-200 hover:bg-blue-700 hover:text-white px-3 py-2 rounded-md flex items-center"
                           onClick={() => setIsMobileMenuOpen(false)}
                         >
                           <span className="mr-2 w-5 h-5 flex items-center justify-center">
@@ -342,7 +346,7 @@ const Navbar = () => {
             
             <Link 
               to="/projects" 
-              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
+              className="text-white hover:bg-blue-700 px-3 py-2 rounded-md flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Briefcase size={18} className="mr-2" />
@@ -351,7 +355,7 @@ const Navbar = () => {
             
             <Link 
               to="/about" 
-              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
+              className="text-white hover:bg-blue-700 px-3 py-2 rounded-md flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Info size={18} className="mr-2" />
@@ -360,7 +364,7 @@ const Navbar = () => {
             
             <Link 
               to="/contact" 
-              className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
+              className="text-white hover:bg-blue-700 px-3 py-2 rounded-md flex items-center"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <Phone size={18} className="mr-2" />
@@ -374,7 +378,7 @@ const Navbar = () => {
                 </div>
                 <Link 
                   to="/auth/dashboard" 
-                  className="text-white hover:bg-blue-700 block px-3 py-2 rounded-md flex items-center"
+                  className="text-white hover:bg-blue-700 px-3 py-2 rounded-md flex items-center"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <Settings size={18} className="mr-2" />
@@ -394,7 +398,7 @@ const Navbar = () => {
             ) : (
               <Link 
                 to="/auth/login" 
-                className="bg-blue-600 hover:bg-blue-500 text-white block px-3 py-2 rounded-md flex items-center"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-md flex items-center"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <User size={18} className="mr-2" />

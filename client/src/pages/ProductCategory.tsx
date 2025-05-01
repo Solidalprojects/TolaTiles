@@ -1,11 +1,11 @@
 // client/src/pages/ProductCategory.tsx - Updated to use context
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, Link } from 'react-router-dom';
 import { Tile } from '../types/types';
 import { tileService } from '../services/api';
 import { formatImageUrl } from '../utils/imageUtils';
 import { useProductTypes, getCategoryBySlug } from '../context/ProductCategoriesContext';
-import { ChevronRight, Search, Filter, X, AlertCircle } from 'lucide-react';
+import { ChevronRight, Search, X, AlertCircle } from 'lucide-react';
 
 const ProductCategory = () => {
   const { slug } = useParams<{ slug: string }>();

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../services/auth';
-import { API_ENDPOINTS } from '../api/api';
 import { Eye, EyeOff, Loader, Lock, User, AlertCircle } from 'lucide-react';
 
 const Login: React.FC = () => {

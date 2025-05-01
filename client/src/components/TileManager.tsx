@@ -1,13 +1,12 @@
 // client/src/components/TileManager.tsx - Fixed category filtering based on product type
 import { useState, useEffect } from 'react';
-import { Tile, Category, TileImage, ProductType } from '../types/types';
+import { Tile, Category, ProductType } from '../types/types';
 import { tileService, categoryService } from '../services/api';
 import { productTypeService } from '../services/productTypeService';
 import { 
   AlertCircle, Loader, Plus, X, Edit, Trash2, 
   Star, Image as ImageIcon, Search, Filter, Camera
 } from 'lucide-react';
-import { getStoredAuth } from '../services/auth';
 
 const TileManager = () => {
   const [tiles, setTiles] = useState<Tile[]>([]);
@@ -171,7 +170,7 @@ const TileManager = () => {
       });
       
       // Add images
-      tileImages.forEach((file, index) => {
+      tileImages.forEach((file) => {
         formData.append('images', file);
       });
       
@@ -253,22 +252,6 @@ const TileManager = () => {
   };
 
   // Format price to currency
-  const formatPrice = (price?: number | string | null) => {
-    if (price === undefined || price === null) {
-      return 'Price upon request';
-    }
-    
-    // Convert string to number if needed
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    
-    // Check if it's a valid number after conversion
-    if (typeof numPrice === 'number' && !isNaN(numPrice)) {
-      return `$${numPrice.toFixed(2)}`;
-    }
-    
-    // Fallback for any other case
-    return typeof price === 'string' ? price : 'Price upon request';
-  };
 
   return (
     <div className="p-6">

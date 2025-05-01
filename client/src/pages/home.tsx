@@ -1,12 +1,12 @@
 // client/src/pages/home.tsx - Simplified carousel implementation
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { Tile, ProductType, Project } from '../types/types';
 import { tileService } from '../services/api';
 import { projectService } from '../services/api';
 import { productTypeService } from '../services/productTypeService';
 import { formatImageUrl } from '../utils/imageUtils';
-import { ArrowLeft, ArrowRight, Star, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, ChevronRight } from 'lucide-react';
 
 const Home = () => {
   // State for featured items
@@ -14,7 +14,7 @@ const Home = () => {
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [featuredProjects, setFeaturedProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   
   // State for carousel
   const [activeTileIndex, setActiveTileIndex] = useState(0);
@@ -86,22 +86,6 @@ const Home = () => {
   };
 
   // Helper function to safely format price
-  const formatPrice = (price?: number | string | null) => {
-    if (price === undefined || price === null) {
-      return 'Price upon request';
-    }
-    
-    // Convert string to number if needed
-    const numPrice = typeof price === 'string' ? parseFloat(price) : price;
-    
-    // Check if it's a valid number after conversion
-    if (typeof numPrice === 'number' && !isNaN(numPrice)) {
-      return `$${numPrice.toFixed(2)}`;
-    }
-    
-    // Fallback for any other case
-    return typeof price === 'string' ? price : 'Price upon request';
-  };
 
   if (loading) {
     return (

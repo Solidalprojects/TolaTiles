@@ -14,7 +14,7 @@ const About = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [testimonials, setTestimonials] = useState<CustomerTestimonial[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   
   // State for testimonial carousel
   const [activeTestimonialIndex, setActiveTestimonialIndex] = useState(0);

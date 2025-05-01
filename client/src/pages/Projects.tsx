@@ -1,12 +1,12 @@
 // client/src/pages/Projects.tsx
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from 'react-router-dom';
 import { Project, ProductType } from '../types/types';
 import { projectService } from '../services/api';
 import { productTypeService } from '../services/productTypeService';
 import { formatImageUrl } from '../utils/imageUtils';
 import { 
-  Search, Filter, X, Calendar, MapPin, 
+  Search, X, Calendar, MapPin, 
   User, ChevronRight, SlidersHorizontal,
   AlertCircle
 } from 'lucide-react';

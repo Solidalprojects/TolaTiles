@@ -5,9 +5,7 @@ import { testimonialService } from '../services/testimonialService';
 import { projectService } from '../services/api';
 import { 
   AlertCircle, Loader, Plus, X, Edit, Trash2, 
-  Star, Check, Upload, User, Image as ImageIcon
-} from 'lucide-react';
-import { getStoredAuth } from '../services/auth';
+  Star, Check, Upload, User} from 'lucide-react';
 
 const TestimonialsManager = () => {
   const [testimonials, setTestimonials] = useState<CustomerTestimonial[]>([]);

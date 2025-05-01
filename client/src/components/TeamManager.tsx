@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { TeamMember } from '../types/types';
 import { teamService } from '../services/teamService';
 import { AlertCircle, Loader, Plus, X, Edit, Trash2, User, Phone, Mail, Eye } from 'lucide-react';
-import { getStoredAuth } from '../services/auth';
 
 const TeamManager = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);

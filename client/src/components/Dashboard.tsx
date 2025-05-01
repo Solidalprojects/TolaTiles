@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentUser, isAuthenticated, logout } from '../services/auth';
+import { getCurrentUser, isAuthenticated } from '../services/auth';
 import DashboardSidebar from './DashboardSidebar';
 import TileManager from './TileManager';
 import CategoryManager from './CategoryManager';
@@ -16,7 +16,7 @@ import { ActiveTab } from '../types/types';
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>(ActiveTab.TILES);
   const [loading, setLoading] = useState<boolean>(true);
-  const [user, setUser] = useState<any>(null);
+  const [, setUser] = useState<any>(null);
   const navigate = useNavigate();
   
   useEffect(() => {

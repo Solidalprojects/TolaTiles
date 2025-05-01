@@ -5,7 +5,7 @@ import { productTypeService } from '../services/productTypeService';
 import { useProductTypes } from '../context/ProductCategoriesContext';
 import { 
   AlertCircle, Loader, Plus, X, Edit, Trash2, Eye, EyeOff, ArrowUp, ArrowDown, 
-  Upload, Image as ImageIcon, LayoutGrid, Menu,
+  LayoutGrid,
   // Import common Lucide icons that might be used for product types
   Grid, Box, Droplet, Flame, Home, BookOpen, Dribbble, Coffee, Compass,
   Diamond, Award, Briefcase, Leaf, Layers, Palette, PaintBucket, Star, Zap,
@@ -199,9 +199,6 @@ const ProductTypeManager = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // Create data object with form data
-      const productTypeData: any = { ...newProductType };
       
       // Create FormData for file uploads
       const formData = new FormData();

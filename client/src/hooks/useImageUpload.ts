@@ -1,7 +1,6 @@
 // client/src/hooks/useImageUpload.ts
 import { useState } from 'react';
 import { getStoredAuth } from '../services/auth';
-import { API_ENDPOINTS } from '../api/api';
 
 interface ImageUploadOptions {
   endpoint: string;

@@ -1,12 +1,9 @@
 // client/src/components/ProjectManager.tsx
 // client/src/components/ProjectManager.tsx
 import { useState, useEffect } from 'react';
-import { Project, ProjectImage } from '../types/types';
+import { Project } from '../types/types';
 import { projectService } from '../services/api';
 import { AlertCircle, Loader, Plus, X, Edit, Trash2, Camera } from 'lucide-react';
-import { formatImageUrl } from '../utils/imageUtils';
-import { getStoredAuth } from '../services/auth';
-import { API_ENDPOINTS } from '../api/api';
 
 const ProjectManager = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -86,7 +83,6 @@ const ProjectManager = () => {
         formData.append(key, value.toString());
       });
       
-      let projectId: number;
       
       // Upload images directly with the project
       if (projectImages.length > 0) {
@@ -106,12 +102,8 @@ const ProjectManager = () => {
       
       if (editingProject) {
         // Update existing project
-        const updatedProject = await projectService.updateProject(editingProject.id, formData);
-        projectId = updatedProject.id;
       } else {
         // Create new project with images in a single request
-        const createdProject = await projectService.createProject(formData);
-        projectId = createdProject.id;
       }
       
       await fetchProjects();

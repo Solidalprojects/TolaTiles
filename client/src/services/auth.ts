@@ -4,9 +4,8 @@
 import { apiClient } from '../api/header';
 import { API_ENDPOINTS } from '../api/api';
 import { LoginFormData } from '../types/auth';
-import axios from 'axios';
-// Add this import to fix the Tile type error
-import { FilterOptions, Tile } from '../types/types';
+// Remove unnecessary import for Tile to avoid circular dependencies
+// import { FilterOptions, Tile } from '../types/types';
 
 // Authentication storage keys
 const TOKEN_KEY = 'adminToken';
@@ -184,123 +183,5 @@ export const authHeader = (): Record<string, string> => {
   } catch (error) {
     console.error('Error generating auth header:', error);
     return {};
-  }
-};
-
-
-export const tileService = {
-  getTiles: async (filters?: Partial<FilterOptions>): Promise<Tile[]> => {
-    try {
-      let url = API_ENDPOINTS.TILES.BASE;
-      
-      // Apply filters if provided
-      if (filters) {
-        const queryParams = new URLSearchParams();
-        
-        Object.entries(filters).forEach(([key, value]) => {
-          if (value !== undefined && value !== null) {
-            queryParams.append(key, value.toString());
-          }
-        });
-        
-        const queryString = queryParams.toString();
-        if (queryString) {
-          url += `?${queryString}`;
-        }
-      }
-      
-      const response = await apiClient.get(url, authHeader().Authorization);
-      return response;
-    } catch (error) {
-      console.error('Error fetching tiles:', error);
-      throw error;
-    }
-  },
-
-  getTileById: async (id: number): Promise<Tile> => {
-    try {
-      const response = await apiClient.get(API_ENDPOINTS.TILES.DETAIL(id), authHeader().Authorization);
-      return response;
-    } catch (error) {
-      console.error(`Error fetching tile with id ${id}:`, error);
-      throw error;
-    }
-  },
-
-  createTile: async (formData: FormData): Promise<Tile> => {
-    try {
-      const response = await axios.post(
-        API_ENDPOINTS.TILES.BASE,
-        formData,
-        { 
-          headers: {
-            ...authHeader(),
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error creating tile:', error);
-      throw error;
-    }
-  },
-
-  updateTile: async (id: number, formData: FormData): Promise<Tile> => {
-    try {
-      const response = await axios.patch(
-        API_ENDPOINTS.TILES.DETAIL(id),
-        formData,
-        { 
-          headers: {
-            ...authHeader(),
-            'Content-Type': 'multipart/form-data'
-          }
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating tile with id ${id}:`, error);
-      throw error;
-    }
-  },
-
-  deleteTile: async (id: number): Promise<void> => {
-    try {
-      await axios.delete(
-        API_ENDPOINTS.TILES.DETAIL(id),
-        { headers: authHeader() }
-      );
-    } catch (error) {
-      console.error(`Error deleting tile with id ${id}:`, error);
-      throw error;
-    }
-  },
-  
-  // New method to manage tile images
-  setImageAsPrimary: async (tileId: number, imageId: number): Promise<void> => {
-    try {
-      await axios.post(
-        `${API_ENDPOINTS.TILES.BASE}images/${imageId}/set_as_primary/`,
-        {},
-        { headers: authHeader() }
-      );
-    } catch (error) {
-      console.error(`Error setting image ${imageId} as primary for tile ${tileId}:`, error);
-      throw error;
-    }
-  },
-  
-  // New method to delete a specific image
-  deleteImage: async (imageId: number): Promise<void> => {
-    try {
-      await axios.delete(
-        `${API_ENDPOINTS.TILES.BASE}images/${imageId}/`,
-        { headers: authHeader() }
-      );
-    } catch (error) {
-      console.error(`Error deleting image ${imageId}:`, error);
-      throw error;
-    }
   }
 };

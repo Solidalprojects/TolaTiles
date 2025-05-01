@@ -1,7 +1,7 @@
 // client/src/pages/TileDetail.tsx
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Tile, TileImage, Category } from '../types/types';
+import { Tile, Category } from '../types/types';
 import { tileService, categoryService } from '../services/api';
 import { formatImageUrl } from '../utils/imageUtils';
 import { ChevronLeft, ChevronRight, ArrowLeft, Star, ShoppingCart, Ruler, Box, DollarSign, Info } from 'lucide-react';
