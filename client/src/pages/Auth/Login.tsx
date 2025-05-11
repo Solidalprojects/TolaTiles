@@ -1,27 +1,49 @@
-// client/src/pages/Auth/Login.tsx - Consolidated Login Page
+// Fixed Login.tsx with improved error handling
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { login } from '../../services/auth';
-import { Eye, EyeOff, Loader, Lock, User, AlertCircle } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import axios from 'axios'; // Using axios for direct API calls
+import { API_ENDPOINTS } from '../../api/api';
+import { setStoredAuth } from '../../services/auth';
+import { Eye, EyeOff, Loader, Lock, User, AlertCircle, CheckCircle } from 'lucide-react';
+
+interface LocationState {
+  message?: string;
+  username?: string;
+}
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
   });
   const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  // When login component mounts, clear any existing session flag
+  // Check for redirect messages
   useEffect(() => {
+    // When login component mounts, clear any existing session flag
     sessionStorage.removeItem('sessionAuth');
-  }, []);
+    
+    // Check for success message from registration
+    const state = location.state as LocationState;
+    if (state && state.message) {
+      setSuccess(state.message);
+      // Pre-fill username if provided from registration
+      if (state.username) {
+        setFormData(prev => ({ ...prev, username: state.username || '' }));
+      }
+    }
+  }, [location]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
+    // Clear errors when user types
+    if (error) setError('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,47 +53,67 @@ const Login: React.FC = () => {
 
     try {
       console.log('Attempting login with:', { username: formData.username });
-      // Use the login function from auth service
-      const data = await login(formData);
       
-      console.log('Login response received:', { hasToken: !!data.token, hasUser: !!data.user });
+      // Use axios directly instead of the login function
+      const response = await axios.post(API_ENDPOINTS.AUTH.LOGIN, formData);
       
-      // Check if user is admin before allowing access to dashboard
-      if (data.user && data.user.is_staff) {
-        console.log('Login successful - redirecting to dashboard');
+      if (response.data && response.data.token) {
+        console.log('Login response received:', { 
+          hasToken: !!response.data.token, 
+          hasUser: !!response.data.user 
+        });
+        
+        // Store token in localStorage
+        setStoredAuth(response.data.token);
+        
+        // Store user data
+        localStorage.setItem('userData', JSON.stringify(response.data.user));
+        
+        // Set a session flag for additional security
         sessionStorage.setItem('sessionAuth', 'true');
-        navigate('/auth/dashboard');
-      } else if (data.user) {
-        // Redirect regular users to a different page (e.g., user dashboard or home)
-        console.log('Login successful - redirecting regular user');
-        sessionStorage.setItem('sessionAuth', 'true');
-        navigate('/user/dashboard');
+        
+        // Check if user is admin before allowing access to dashboard
+        if (response.data.user && response.data.user.is_staff) {
+          console.log('Login successful - redirecting to dashboard');
+          navigate('/auth/dashboard');
+        } else if (response.data.user) {
+          // Redirect regular users to a different page
+          console.log('Login successful - redirecting regular user');
+          navigate('/');
+        } else {
+          setError('Invalid user data received.');
+        }
       } else {
-        setError('Invalid user data received.');
+        setError('Login failed: Invalid response format');
       }
     } catch (error: any) {
       console.error('Login error:', error);
       
-      // Handle different error scenarios
-      if (error.message && error.message.includes('Authentication failed')) {
-        setError('Invalid username or password');
-      } else if (error.response) {
-        // Server responded with an error
+      // Enhanced error handling
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
         if (error.response.status === 401) {
           setError('Invalid username or password');
-        } else if (error.response.data && error.response.data.detail) {
-          setError(error.response.data.detail);
-        } else if (error.response.data && error.response.data.error) {
-          setError(error.response.data.error);
+        } else if (error.response.data) {
+          if (error.response.data.error) {
+            setError(error.response.data.error);
+          } else if (error.response.data.detail) {
+            setError(error.response.data.detail);
+          } else if (error.response.data.non_field_errors) {
+            setError(error.response.data.non_field_errors[0]);
+          } else {
+            setError('Authentication failed. Please try again.');
+          }
         } else {
-          setError('Authentication failed. Please try again.');
+          setError(`Error ${error.response.status}: Authentication failed.`);
         }
       } else if (error.request) {
-        // Request was made but no response received
+        // The request was made but no response was received
         setError('Server not responding. Please check your connection.');
       } else {
-        // Something else happened
-        setError('Login failed: ' + (error.message || 'Please try again later.'));
+        // Something happened in setting up the request that triggered an Error
+        setError(`Login failed: ${error.message || 'Please try again later.'}`);
       }
       
       // Clear session auth flag on any error
@@ -97,6 +139,13 @@ const Login: React.FC = () => {
           <div className="flex items-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <AlertCircle size={18} className="mr-2" />
             <span>{error}</span>
+          </div>
+        )}
+        
+        {success && (
+          <div className="flex items-center bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            <CheckCircle size={18} className="mr-2" />
+            <span>{success}</span>
           </div>
         )}
         

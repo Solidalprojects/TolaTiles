@@ -26,9 +26,9 @@ router.register(r'chat/messages', views.MessageViewSet, basename='message')
 urlpatterns = [
     path('', include(router.urls)),
     
-    # Authentication endpoints
+      # Authentication endpoints
     path('auth/login/', admin_login, name='login'),
-    path('auth/register/', views.register_view, name='register'),
+    path('auth/register/', views.register_view, name='register'),  # This should use the fixed register_view
     path('auth/user/', views.get_user_info, name='user_info'),
     path('auth/change-password/', views.change_password, name='change_password'),
     

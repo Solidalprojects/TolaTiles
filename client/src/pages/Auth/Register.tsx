@@ -1,7 +1,7 @@
-// client/src/pages/Auth/Register.tsx
-import React, { useState, useEffect } from 'react';
+// Fixed Register.tsx with direct API call
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { apiClient } from '../../api/header';
+import axios from 'axios'; // Import axios for direct API calls
 import { API_ENDPOINTS } from '../../api/api';
 import { Eye, EyeOff, Loader, Lock, User, AlertCircle, Mail, UserPlus, Check, X } from 'lucide-react';
 
@@ -117,21 +117,35 @@ const Register: React.FC = () => {
       setIsLoading(true);
       setFormError(null);
       
-      // Call register endpoint
-      const response = await apiClient.post(API_ENDPOINTS.AUTH.REGISTER, formData);
+      // Directly call the API using axios instead of using apiClient
+      // This bypasses any potential auth header issues
+      const response = await axios.post(API_ENDPOINTS.AUTH.REGISTER, {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        password_confirm: formData.password_confirm,
+        first_name: formData.first_name || '',
+        last_name: formData.last_name || ''
+      });
       
-      console.log('Registration successful:', response);
+      console.log('Registration successful:', response.data);
       
       // If we received a token, store it and redirect to login
-      if (response && response.token) {
+      if (response.data && response.data.token) {
         // Redirect to login page with success message
-        navigate('/auth/login', { state: { message: 'Registration successful! Please log in.' } });
+        navigate('/auth/login', { 
+          state: { 
+            message: 'Registration successful! Please log in.',
+            username: formData.username 
+          } 
+        });
       } else {
         navigate('/auth/login');
       }
     } catch (error: any) {
       console.error('Registration error:', error);
       
+      // Enhanced error handling
       if (error.response && error.response.data) {
         // Handle validation errors from API
         if (error.response.data.username) {

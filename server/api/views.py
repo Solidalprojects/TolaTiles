@@ -35,14 +35,15 @@ logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([AllowAny])  # Make sure this is properly imported from rest_framework.permissions
 def register_view(request):
     """
-    Register a new user
+    Register a new user without requiring authentication
     """
     serializer = RegisterSerializer(data=request.data)
     
     if serializer.is_valid():
+        # Create user
         user = serializer.save()
         
         # Create token for the new user
