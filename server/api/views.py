@@ -11,12 +11,15 @@ from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from .models import (
+    UserProfile, Conversation, Message,
     TileCategory, TileImage, Project, ProjectImage, 
     Contact, Subscriber, Tile, ProductType, 
     TeamMember, CustomerTestimonial
 )
 from .serializers import (
-    UserSerializer, TileCategorySerializer, TileCategoryDetailSerializer,
+    UserSerializer, UserProfileSerializer, MessageSerializer, ConversationSerializer,
+    RegisterSerializer, PasswordChangeSerializer, SendMessageSerializer, MarkMessagesReadSerializer,
+    TileCategorySerializer, TileCategoryDetailSerializer,
     TileImageSerializer, ProjectSerializer, ProjectDetailSerializer,
     ProjectImageSerializer, ContactSerializer, SubscriberSerializer, 
     TileSerializer, TileDetailSerializer, ProductTypeSerializer,
@@ -27,6 +30,321 @@ import logging
 
 # Set up logger
 logger = logging.getLogger(__name__)
+
+
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_view(request):
+    """
+    Register a new user
+    """
+    serializer = RegisterSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        user = serializer.save()
+        
+        # Create token for the new user
+        token, _ = Token.objects.get_or_create(user=user)
+        
+        # Return user info and token
+        user_serializer = UserSerializer(user, context={'request': request})
+        
+        response_data = {
+            'token': token.key,
+            'user': user_serializer.data
+        }
+        
+        logger.info(f"New user registered: {user.username}")
+        return Response(response_data, status=status.HTTP_201_CREATED)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# User Login View (defined in views_auth.py)
+
+# Get User Info View
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def get_user_info(request):
+    """
+    Get information about the currently authenticated user.
+    """
+    serializer = UserSerializer(request.user, context={'request': request})
+    return Response(serializer.data)
+
+# Update User Profile View
+@api_view(['PATCH', 'PUT'])
+@permission_classes([IsAuthenticated])
+def update_user_profile(request):
+    """
+    Update the authenticated user's profile
+    """
+    user = request.user
+    
+    # Prepare profile data
+    profile_data = {}
+    for key in ['bio', 'phone', 'address', 'preferences']:
+        if key in request.data:
+            profile_data[key] = request.data.pop(key)
+    
+    # Handle profile image
+    if 'profile_image' in request.FILES:
+        profile_data['profile_image'] = request.FILES['profile_image']
+    
+    # Update user data
+    serializer = UserSerializer(
+        user, 
+        data=request.data, 
+        partial=True, 
+        context={'request': request, 'profile_data': profile_data}
+    )
+    
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data)
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Change Password View
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    Change password for authenticated user.
+    """
+    serializer = PasswordChangeSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        user = request.user
+        
+        # Check old password
+        if not user.check_password(serializer.validated_data['old_password']):
+            return Response(
+                {'old_password': 'Incorrect password'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Set new password
+        user.set_password(serializer.validated_data['new_password'])
+        user.save()
+        
+        # Update token
+        Token.objects.filter(user=user).delete()
+        token, _ = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            'token': token.key,
+            'message': 'Password changed successfully'
+        })
+    
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+# Chat Views
+class ConversationViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing conversations
+    """
+    serializer_class = ConversationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        return Conversation.objects.filter(participants=self.request.user)
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        return context
+    
+    def create(self, request, *args, **kwargs):
+        # Get or create conversation between users
+        other_user_id = request.data.get('other_user_id')
+        
+        if not other_user_id:
+            return Response(
+                {'error': 'other_user_id is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            other_user = User.objects.get(id=other_user_id)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if conversation exists
+        conversations = Conversation.objects.filter(participants=request.user) \
+                                  .filter(participants=other_user)
+        
+        if conversations.exists():
+            serializer = self.get_serializer(conversations.first())
+            return Response(serializer.data)
+        
+        # Create new conversation
+        conversation = Conversation.objects.create()
+        conversation.participants.add(request.user, other_user)
+        
+        serializer = self.get_serializer(conversation)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class MessageViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing messages
+    """
+    serializer_class = MessageSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        user = self.request.user
+        
+        # Filter by conversation if provided
+        conversation_id = self.request.query_params.get('conversation')
+        if conversation_id:
+            return Message.objects.filter(
+                conversation__participants=user,
+                conversation_id=conversation_id
+            )
+        
+        # Otherwise return all messages for user
+        return Message.objects.filter(
+            Q(sender=user) | Q(receiver=user)
+        )
+    
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        return context
+    
+    @action(detail=False, methods=['post'])
+    def send_message(self, request):
+        """
+        Send a message to another user
+        """
+        serializer = SendMessageSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            receiver_id = serializer.validated_data['receiver_id']
+            content = serializer.validated_data.get('content', '')
+            attachment = serializer.validated_data.get('attachment')
+            
+            try:
+                receiver = User.objects.get(id=receiver_id)
+            except User.DoesNotExist:
+                return Response(
+                    {'error': 'Recipient not found'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get or create conversation
+            conversations = Conversation.objects.filter(participants=request.user) \
+                                      .filter(participants=receiver)
+            
+            if conversations.exists():
+                conversation = conversations.first()
+            else:
+                conversation = Conversation.objects.create()
+                conversation.participants.add(request.user, receiver)
+            
+            # Create message
+            message = Message.objects.create(
+                conversation=conversation,
+                sender=request.user,
+                receiver=receiver,
+                content=content,
+                attachment=attachment,
+                is_admin_message=request.user.is_staff
+            )
+            
+            # Update conversation timestamp
+            conversation.save()  # This updates the updated_at field
+            
+            message_serializer = MessageSerializer(message, context={'request': request})
+            return Response(message_serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=['post'])
+    def mark_read(self, request):
+        """
+        Mark messages as read
+        """
+        serializer = MarkMessagesReadSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            message_ids = serializer.validated_data['message_ids']
+            
+            # Only mark messages where the current user is the receiver
+            messages = Message.objects.filter(
+                id__in=message_ids,
+                receiver=request.user
+            )
+            
+            count = messages.update(is_read=True, status='read')
+            
+            return Response({
+                'status': 'success',
+                'messages_updated': count
+            })
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'])
+    def admin_contact(self, request):
+        """
+        Send a message to an admin
+        """
+        message = request.data.get('message', '')
+        attachment = request.data.get('attachment')
+        
+        if not message and not attachment:
+            return Response(
+                {'error': 'Message or attachment is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Find an admin user
+        try:
+            admin = User.objects.filter(is_staff=True).first()
+            
+            if not admin:
+                return Response(
+                    {'error': 'No admin users found'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get or create conversation
+            conversations = Conversation.objects.filter(participants=request.user) \
+                                      .filter(participants=admin)
+            
+            if conversations.exists():
+                conversation = conversations.first()
+            else:
+                conversation = Conversation.objects.create()
+                conversation.participants.add(request.user, admin)
+            
+            # Create message
+            message = Message.objects.create(
+                conversation=conversation,
+                sender=request.user,
+                receiver=admin,
+                content=message,
+                attachment=attachment
+            )
+            
+            # Update conversation timestamp
+            conversation.save()
+            
+            return Response({
+                'status': 'success',
+                'message': 'Message sent to admin'
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {'error': str(e)}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 
 class IsAdminOrReadOnly(permissions.BasePermission):
     """

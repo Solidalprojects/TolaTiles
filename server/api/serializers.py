@@ -14,7 +14,183 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'is_staff']
 
 from rest_framework import serializers
-from .models import ProductType
+from .models import (
+    UserProfile, Conversation, Message, ProductType, 
+    TileCategory, TileImage, Project, ProjectImage, 
+    Contact, Subscriber, Tile, TeamMember, CustomerTestimonial
+)
+
+
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    profile_image_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = UserProfile
+        fields = [
+            'id', 'bio', 'profile_image', 'profile_image_url', 
+            'phone', 'address', 'preferences', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'profile_image_url']
+    
+    def get_profile_image_url(self, obj):
+        if obj.profile_image:
+            return self.context['request'].build_absolute_uri(obj.profile_image.url)
+        return None
+
+class UserSerializer(serializers.ModelSerializer):
+    profile = UserProfileSerializer(read_only=True)
+    
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name', 'is_staff', 'profile']
+        read_only_fields = ['id', 'is_staff']
+    
+    def update(self, instance, validated_data):
+        # Update User model fields
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.save()
+        
+        # Update UserProfile fields
+        profile_data = self.context.get('profile_data')
+        if profile_data:
+            profile = instance.profile
+            
+            if 'bio' in profile_data:
+                profile.bio = profile_data.get('bio')
+            
+            if 'phone' in profile_data:
+                profile.phone = profile_data.get('phone')
+            
+            if 'address' in profile_data:
+                profile.address = profile_data.get('address')
+            
+            if 'profile_image' in profile_data:
+                profile.profile_image = profile_data.get('profile_image')
+            
+            if 'preferences' in profile_data:
+                profile.preferences = profile_data.get('preferences')
+            
+            profile.save()
+        
+        return instance
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
+    receiver_username = serializers.CharField(source='receiver.username', read_only=True)
+    sender_profile_image = serializers.SerializerMethodField()
+    attachment_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Message
+        fields = [
+            'id', 'conversation', 'sender', 'sender_username', 'sender_profile_image',
+            'receiver', 'receiver_username', 'content', 'attachment', 'attachment_url',
+            'is_read', 'is_admin_message', 'status', 'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at', 'sender_username', 
+                           'receiver_username', 'sender_profile_image', 'attachment_url']
+    
+    def get_sender_profile_image(self, obj):
+        try:
+            if obj.sender.profile.profile_image:
+                return self.context['request'].build_absolute_uri(obj.sender.profile.profile_image.url)
+        except:
+            pass
+        return None
+    
+    def get_attachment_url(self, obj):
+        if obj.attachment:
+            return self.context['request'].build_absolute_uri(obj.attachment.url)
+        return None
+
+class ConversationSerializer(serializers.ModelSerializer):
+    last_message = serializers.SerializerMethodField()
+    unread_count = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Conversation
+        fields = ['id', 'participants', 'last_message', 'unread_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'last_message', 'unread_count']
+    
+    def get_last_message(self, obj):
+        last_message = obj.messages.order_by('-created_at').first()
+        if last_message:
+            return MessageSerializer(last_message, context=self.context).data
+        return None
+    
+    def get_unread_count(self, obj):
+        user = self.context.get('request').user
+        return obj.messages.filter(receiver=user, is_read=False).count() if user else 0
+
+# Registration Serializer
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    password_confirm = serializers.CharField(write_only=True, required=True, style={'input_type': 'password'})
+    
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password', 'password_confirm', 'first_name', 'last_name']
+        extra_kwargs = {
+            'first_name': {'required': False},
+            'last_name': {'required': False},
+            'email': {'required': True}
+        }
+    
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password_confirm']:
+            raise serializers.ValidationError({"password": "Password fields didn't match."})
+        return attrs
+    
+    def create(self, validated_data):
+        validated_data.pop('password_confirm')
+        user = User.objects.create(
+            username=validated_data['username'],
+            email=validated_data['email'],
+            first_name=validated_data.get('first_name', ''),
+            last_name=validated_data.get('last_name', '')
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+        return user
+
+# Password Change Serializer
+class PasswordChangeSerializer(serializers.Serializer):
+    old_password = serializers.CharField(required=True)
+    new_password = serializers.CharField(required=True)
+    new_password_confirm = serializers.CharField(required=True)
+    
+    def validate(self, attrs):
+        if attrs['new_password'] != attrs['new_password_confirm']:
+            raise serializers.ValidationError({"new_password": "Password fields didn't match."})
+        return attrs
+        
+# Add serializers for sending messages
+class SendMessageSerializer(serializers.Serializer):
+    receiver_id = serializers.IntegerField(required=True)
+    content = serializers.CharField(required=False, allow_blank=True)
+    attachment = serializers.FileField(required=False)
+    
+    def validate(self, attrs):
+        # Either content or attachment must be provided
+        if not attrs.get('content') and not attrs.get('attachment'):
+            raise serializers.ValidationError(
+                "Either content or attachment must be provided."
+            )
+        return attrs
+
+# Add serializers for marking messages as read
+class MarkMessagesReadSerializer(serializers.Serializer):
+    message_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        required=True
+    )
+
+
 
 class ProductTypeSerializer(serializers.ModelSerializer):
     image_url = serializers.SerializerMethodField()

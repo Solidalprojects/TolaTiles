@@ -1,15 +1,16 @@
-// client/src/pages/ProjectDetail.tsx (continued from previous part)
+// Updated src/pages/ProjectDetail.tsx
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Project, Tile } from '../types/types';
 import { projectService, tileService } from '../services/api';
 import { formatImageUrl } from '../utils/imageUtils';
 import { 
   ChevronLeft, ChevronRight, ArrowLeft, Calendar, MapPin, 
-  User, CheckSquare, ChevronDown, ChevronUp, Info 
+  User, CheckSquare, ChevronDown, ChevronUp, Info, AlertCircle
 } from 'lucide-react';
 
 const ProjectDetail = () => {
+  const navigate = useNavigate();
   const { id, slug } = useParams<{ id?: string, slug?: string }>();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -20,40 +21,54 @@ const ProjectDetail = () => {
   const [relatedProjects, setRelatedProjects] = useState<Project[]>([]);
 
   useEffect(() => {
-    const fetchProjectData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
+    console.log("ProjectDetail component mounted with params:", { id, slug });
+    fetchProjectData();
+  }, [id, slug]); // Re-fetch when the route parameters change
+
+  const fetchProjectData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      let projectData;
+      console.log("Fetching project with id or slug:", id || slug);
+      
+      // Fetch project either by ID or slug
+      if (id && !isNaN(parseInt(id))) {
+        console.log("Fetching project by ID:", id);
+        projectData = await projectService.getProjectById(parseInt(id));
+      } else if (slug) {
+        console.log("Fetching project by slug:", slug);
+        // Fallback to fetching all projects and filtering by slug
+        const allProjects = await projectService.getProjects();
+        projectData = allProjects.find(p => p.slug === slug) || null;
         
-        let projectData;
-        // Fetch project either by ID or slug
-        if (id && !isNaN(parseInt(id))) {
-          projectData = await projectService.getProjectById(parseInt(id));
-        } else if (slug) {
-          // You'll need to add a method to fetch by slug in your projectService
-          // For now, we'll simulate it by fetching all projects and filtering
-          const allProjects = await projectService.getProjects();
-          projectData = allProjects.find(p => p.slug === slug) || null;
-          
-          if (!projectData) {
-            throw new Error(`Project with slug "${slug}" not found`);
-          }
-        } else {
-          throw new Error('No ID or slug provided');
+        if (!projectData) {
+          throw new Error(`Project with slug "${slug}" not found`);
         }
-        
-        setProject(projectData);
-        
-        // Fetch tiles used in this project if available
-        if (projectData.tiles_used && projectData.tiles_used.length > 0) {
-          setTilesUsed(projectData.tiles_used);
-        } else {
-          // If tiles_used is not populated, try to fetch some sample tiles
+      } else {
+        throw new Error('No ID or slug provided');
+      }
+      
+      console.log("Project data fetched:", projectData);
+      setProject(projectData);
+      
+      // Fetch tiles used in this project if available
+      if (projectData.tiles_used && projectData.tiles_used.length > 0) {
+        setTilesUsed(projectData.tiles_used);
+      } else {
+        // If tiles_used is not populated, try to fetch some sample tiles
+        try {
           const sampleTiles = await tileService.getTiles({ featured: true });
           setTilesUsed(sampleTiles.slice(0, 4)); // Just use a few sample tiles
+        } catch (err) {
+          console.error("Error fetching sample tiles:", err);
+          // Non-critical error, we can continue without tiles
         }
-        
-        // Fetch related projects (for example, projects in the same location)
+      }
+      
+      // Fetch related projects (for example, projects in the same location)
+      try {
         const allProjects = await projectService.getProjects();
         const filtered = allProjects
           .filter(p => p.id !== projectData.id && p.location === projectData.location)
@@ -69,15 +84,16 @@ const ProjectDetail = () => {
           setRelatedProjects(filtered);
         }
       } catch (err) {
-        console.error('Error fetching project details:', err);
-        setError('Failed to load project details. Please try again later.');
-      } finally {
-        setLoading(false);
+        console.error("Error fetching related projects:", err);
+        // Non-critical error, we can continue without related projects
       }
-    };
-    
-    fetchProjectData();
-  }, [id, slug]);
+    } catch (err) {
+      console.error('Error fetching project details:', err);
+      setError('Failed to load project details. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const handlePrevImage = () => {
     if (!project || !project.images || project.images.length === 0) return;
@@ -127,7 +143,7 @@ const ProjectDetail = () => {
         <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded shadow-md">
           <div className="flex">
             <div className="flex-shrink-0">
-              <Info className="h-5 w-5 text-red-400" />
+              <AlertCircle className="h-5 w-5 text-red-400" />
             </div>
             <div className="ml-3">
               <h3 className="text-sm font-medium text-red-800">
@@ -221,6 +237,10 @@ const ProjectDetail = () => {
                   src={formatImageUrl(images[activeImageIndex].image_url)} 
                   alt={images[activeImageIndex].caption || project.title} 
                   className="w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = "https://via.placeholder.com/800x500?text=Project+Image";
+                  }}
                 />
               ) : (
                 <div className="flex items-center justify-center h-full">
@@ -260,7 +280,7 @@ const ProjectDetail = () => {
               <div className="mt-4 grid grid-cols-5 gap-2">
                 {images.map((image, index) => (
                   <button
-                    key={image.id}
+                    key={typeof image.id === 'number' ? image.id : index}
                     onClick={() => setActiveImageIndex(index)}
                     className={`relative rounded-md overflow-hidden h-20 ${
                       index === activeImageIndex ? 'ring-2 ring-blue-500' : 'ring-1 ring-gray-200'
@@ -271,6 +291,10 @@ const ProjectDetail = () => {
                       src={formatImageUrl(image.image_url)} 
                       alt={`Thumbnail ${index + 1}`}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = "https://via.placeholder.com/100x100?text=Thumbnail";
+                      }}
                     />
                     {image.is_primary && (
                       <div className="absolute top-0 right-0 bg-yellow-400 p-1 rounded-bl-md">
@@ -361,6 +385,10 @@ const ProjectDetail = () => {
                         src={formatImageUrl(tile.primary_image)} 
                         alt={tile.title} 
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://via.placeholder.com/400x300?text=${tile.title.charAt(0)}`;
+                        }}
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full">
@@ -375,7 +403,7 @@ const ProjectDetail = () => {
                       {tile.material && <span>{tile.material}</span>}
                     </p>
                     {tile.price && (
-                      <p className="font-medium text-gray-900">${tile.price.toFixed(2)}</p>
+                      <p className="font-medium text-gray-900">${typeof tile.price === 'number' ? tile.price.toFixed(2) : tile.price}</p>
                     )}
                   </div>
                 </Link>
@@ -401,6 +429,10 @@ const ProjectDetail = () => {
                         src={formatImageUrl(relatedProject.primary_image)} 
                         alt={relatedProject.title} 
                         className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = `https://via.placeholder.com/400x300?text=${relatedProject.title.charAt(0)}`;
+                        }}
                       />
                     ) : (
                       <div className="flex items-center justify-center h-full">

@@ -2,8 +2,96 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils.text import slugify
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 import uuid
 
+
+
+# Add UserProfile model
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    bio = models.TextField(blank=True, null=True)
+    profile_image = models.ImageField(upload_to='profiles/', blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    address = models.TextField(blank=True, null=True)
+    preferences = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return f"Profile for {self.user.username}"
+    
+    @property
+    def image_url(self):
+        if self.profile_image:
+            return self.profile_image.url
+        return None
+
+# Create UserProfile automatically when a User is created
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance)
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    try:
+        instance.profile.save()
+    except UserProfile.DoesNotExist:
+        UserProfile.objects.create(user=instance)
+
+# Chat Models
+class Conversation(models.Model):
+    participants = models.ManyToManyField(User, related_name='conversations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-updated_at']
+    
+    def __str__(self):
+        return f"Conversation {self.id} between {', '.join([user.username for user in self.participants.all()])}"
+    
+    @property
+    def last_message(self):
+        return self.messages.order_by('-created_at').first()
+    
+    @property
+    def unread_count(self):
+        return self.messages.filter(is_read=False).count()
+
+class Message(models.Model):
+    STATUS_CHOICES = (
+        ('sent', 'Sent'),
+        ('delivered', 'Delivered'),
+        ('read', 'Read'),
+        ('failed', 'Failed'),
+    )
+    
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
+    receiver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_messages')
+    content = models.TextField(blank=True, null=True)
+    attachment = models.FileField(upload_to='chat_attachments/', blank=True, null=True)
+    is_read = models.BooleanField(default=False)
+    is_admin_message = models.BooleanField(default=False)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='sent')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"Message from {self.sender.username} to {self.receiver.username}"
+    
+    @property
+    def attachment_url(self):
+        if self.attachment:
+            return self.attachment.url
+        return None
+    
 class ProductType(models.Model):
     name = models.CharField(max_length=100)  # Backsplash, Fireplace, etc.
     slug = models.SlugField(max_length=120, unique=True, blank=True)

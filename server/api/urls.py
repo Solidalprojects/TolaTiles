@@ -1,5 +1,7 @@
 # server/api/urls.py - Updated with new endpoints for product types, team, and testimonials
 
+
+# server/api/urls.py - Updated with user profile and chat endpoints
 from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
 from . import views
@@ -13,11 +15,13 @@ router.register(r'projects', views.ProjectViewSet)
 router.register(r'project-images', views.ProjectImageViewSet)
 router.register(r'contacts', views.ContactViewSet)
 router.register(r'subscribers', views.SubscriberViewSet)
-
-# New ViewSet registrations
 router.register(r'product-types', views.ProductTypeViewSet)
 router.register(r'team', views.TeamMemberViewSet)
 router.register(r'testimonials', views.CustomerTestimonialViewSet)
+
+# Add new routers for chat functionality
+router.register(r'chat/conversations', views.ConversationViewSet, basename='conversation')
+router.register(r'chat/messages', views.MessageViewSet, basename='message')
 
 urlpatterns = [
     path('', include(router.urls)),
@@ -28,7 +32,15 @@ urlpatterns = [
     path('auth/user/', views.get_user_info, name='user_info'),
     path('auth/change-password/', views.change_password, name='change_password'),
     
-    # Additional subscriber endpoints
+    # User profile endpoints
+    path('auth/profile/', views.update_user_profile, name='update_profile'),
+    
+    # Chat endpoints
+    path('chat/send/', views.MessageViewSet.as_view({'post': 'send_message'}), name='send_message'),
+    path('chat/mark-read/', views.MessageViewSet.as_view({'post': 'mark_read'}), name='mark_read'),
+    path('chat/admin-contact/', views.MessageViewSet.as_view({'post': 'admin_contact'}), name='admin_contact'),
+    
+    # Subscriber endpoints
     path('newsletter/subscribe/', views.SubscriberViewSet.as_view({'post': 'subscribe'}), name='subscribe'),
     path('newsletter/unsubscribe/', views.SubscriberViewSet.as_view({'post': 'unsubscribe'}), name='unsubscribe'),
     
