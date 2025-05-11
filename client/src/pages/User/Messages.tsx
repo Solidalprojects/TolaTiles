@@ -10,7 +10,7 @@ import {
   Download, Maximize2, MoreVertical
 } from 'lucide-react';
 
-const MessageStatus: React.FC<{ status: MessageStatus }> = ({ status }) => {
+const MessageStatusIcon: React.FC<{ status: MessageStatus }> = ({ status }) => {
   switch (status) {
     case MessageStatus.SENT:
       return <Check size={14} className="text-gray-400" />;
@@ -263,7 +263,7 @@ const Messages: React.FC = () => {
                 <div className="flex-1 flex flex-col items-center justify-center p-4">
                   <div className="text-center">
                     <div className="w-16 h-16 mx-auto rounded-full bg-blue-100 flex items-center justify-center text-blue-500 mb-4">
-                      <MessageStatus status={MessageStatus.DELIVERED} />
+                      <MessageStatusIcon status={MessageStatus.DELIVERED} />
                     </div>
                     <h3 className="text-lg font-medium text-gray-900">Your Messages</h3>
                     <p className="mt-1 text-sm text-gray-500">
@@ -377,7 +377,7 @@ const Messages: React.FC = () => {
                                         <div className="flex items-center justify-end space-x-1">
                                           <span>{formatMessageDate(message.created_at)}</span>
                                           {isSentByMe && (
-                                            <MessageStatus status={message.status} />
+                                            <MessageStatusIcon status={message.status} />
                                           )}
                                         </div>
                                       </div>

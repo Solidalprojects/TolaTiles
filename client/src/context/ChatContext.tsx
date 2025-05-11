@@ -126,34 +126,34 @@ export const ChatProvider: React.FC<ChatProviderProps> = ({ children }) => {
   };
 
   const fetchMessages = async (conversationId: number) => {
-    if (!isAuthenticated) return;
+  if (!isAuthenticated) return;
+  
+  try {
+    setLoading(true);
     
-    try {
-      setLoading(true);
-      
-      const { token } = getStoredAuth();
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-      
-      const response = await apiClient.get(`${CHAT_API.MESSAGES}?conversation=${conversationId}`, token);
-      setMessages(response);
-      
-      // Mark messages as read
-      const unreadMessageIds = response
-        .filter(msg => msg.receiver === user?.id && msg.status !== MessageStatus.READ)
-        .map(msg => msg.id);
-      
-      if (unreadMessageIds.length > 0) {
-        markAsRead(unreadMessageIds);
-      }
-    } catch (err: any) {
-      console.error('Error fetching messages:', err);
-      setError(err.message || 'Failed to load messages');
-    } finally {
-      setLoading(false);
+    const { token } = getStoredAuth();
+    if (!token) {
+      throw new Error('Not authenticated');
     }
-  };
+    
+    const response = await apiClient.get(`${CHAT_API.MESSAGES}?conversation=${conversationId}`, token);
+    setMessages(response);
+    
+    // Mark messages as read - Add explicit ChatMessage type to msg parameter
+    const unreadMessageIds = response
+      .filter((msg: ChatMessage) => msg.receiver === user?.id && msg.status !== MessageStatus.READ)
+      .map((msg: ChatMessage) => msg.id);
+    
+    if (unreadMessageIds.length > 0) {
+      markAsRead(unreadMessageIds);
+    }
+  } catch (err: any) {
+    console.error('Error fetching messages:', err);
+    setError(err.message || 'Failed to load messages');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const sendMessage = async (data: SendMessageData) => {
     if (!isAuthenticated) return;
