@@ -1,17 +1,17 @@
-// Updated App.tsx with Contact component
-
+// Updated App.tsx with Register route
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect, JSX } from 'react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/home';
 import Dashboard from './components/Dashboard';
-import Login from './admin/Login';
+import Login from './pages/Auth/Login'; 
+import Register from './pages/Auth/Register'; // Import the Register component
 import TileDetail from './pages/TileDetail';
 import ProjectDetail from './pages/ProjectDetail';
 import About from './pages/About';
 import Projects from './pages/Projects';
-import Contact from './pages/Contact'; // Import the Contact page component
+import Contact from './pages/Contact'; 
 import { isAuthenticated } from './services/auth';
 import './App.css';
 import ProductCategory from './pages/ProductCategory';
@@ -202,7 +202,7 @@ function App() {
             }
           />
           
-          {/* Auth routes */}
+          {/* Auth login route */}
           <Route
             path="/auth/login"
             element={
@@ -211,6 +211,22 @@ function App() {
                   <Navbar />
                   <main className="min-h-screen bg-gray-50">
                     <Login />
+                  </main>
+                  <Footer />
+                </>
+              </PublicOnlyRoute>
+            }
+          />
+          
+          {/* Auth register route - Added this route */}
+          <Route
+            path="/auth/register"
+            element={
+              <PublicOnlyRoute>
+                <>
+                  <Navbar />
+                  <main className="min-h-screen bg-gray-50">
+                    <Register />
                   </main>
                   <Footer />
                 </>

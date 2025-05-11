@@ -1,13 +1,22 @@
-// src/pages/Auth/Register.tsx
+// client/src/pages/Auth/Register.tsx
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
+import { apiClient } from '../../api/header';
+import { API_ENDPOINTS } from '../../api/api';
 import { Eye, EyeOff, Loader, Lock, User, AlertCircle, Mail, UserPlus, Check, X } from 'lucide-react';
+
+interface RegisterFormData {
+  username: string;
+  email: string;
+  password: string;
+  password_confirm: string;
+  first_name: string;
+  last_name: string;
+}
 
 const Register: React.FC = () => {
   const navigate = useNavigate();
-  const { register, isAuthenticated, user, error, loading, clearError } = useAuth();
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<RegisterFormData>({
     username: '',
     email: '',
     password: '',
@@ -15,39 +24,32 @@ const Register: React.FC = () => {
     first_name: '',
     last_name: '',
   });
+  
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [passwordStrength, setPasswordStrength] = useState<number>(0);
   const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
-
-  // Redirect if already authenticated
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      // Redirect admin users to admin dashboard
-      if (user.is_staff) {
-        navigate('/auth/dashboard');
-      } else {
-        // Redirect regular users to user dashboard or home
-        navigate('/user/dashboard');
-      }
-    }
-  }, [isAuthenticated, user, navigate]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
     
-    // Clear error when user starts typing again
-    if (error) clearError();
-    if (formError) setFormError(null);
+    // Clear form error when user types
+    if (formError) {
+      setFormError(null);
+    }
     
-    // Check password strength
+    // Check password strength if password field is being updated
     if (name === 'password') {
       checkPasswordStrength(value);
     }
     
-    // Check if passwords match
+    // Check if passwords match when either password field changes
     if (name === 'password_confirm' || (name === 'password' && formData.password_confirm)) {
       validatePasswordMatch(name === 'password' ? value : formData.password, name === 'password_confirm' ? value : formData.password_confirm);
     }
@@ -92,7 +94,7 @@ const Register: React.FC = () => {
   const validatePasswordMatch = (password: string, confirmPassword: string) => {
     if (password && confirmPassword && password !== confirmPassword) {
       setFormError('Passwords do not match');
-    } else {
+    } else if (formError === 'Passwords do not match') {
       setFormError(null);
     }
   };
@@ -112,16 +114,46 @@ const Register: React.FC = () => {
     }
     
     try {
-      await register(
-        formData.username,
-        formData.email,
-        formData.password,
-        formData.first_name,
-        formData.last_name
-      );
-    } catch (err) {
-      // Error is handled in the auth context
-      console.error('Registration submission error:', err);
+      setIsLoading(true);
+      setFormError(null);
+      
+      // Call register endpoint
+      const response = await apiClient.post(API_ENDPOINTS.AUTH.REGISTER, formData);
+      
+      console.log('Registration successful:', response);
+      
+      // If we received a token, store it and redirect to login
+      if (response && response.token) {
+        // Redirect to login page with success message
+        navigate('/auth/login', { state: { message: 'Registration successful! Please log in.' } });
+      } else {
+        navigate('/auth/login');
+      }
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      
+      if (error.response && error.response.data) {
+        // Handle validation errors from API
+        if (error.response.data.username) {
+          setFormError(`Username error: ${error.response.data.username}`);
+        } else if (error.response.data.email) {
+          setFormError(`Email error: ${error.response.data.email}`);
+        } else if (error.response.data.password) {
+          setFormError(`Password error: ${error.response.data.password}`);
+        } else if (error.response.data.detail) {
+          setFormError(error.response.data.detail);
+        } else if (error.response.data.error) {
+          setFormError(error.response.data.error);
+        } else {
+          setFormError('Registration failed. Please check your information and try again.');
+        }
+      } else if (error.message) {
+        setFormError(error.message);
+      } else {
+        setFormError('An error occurred during registration. Please try again later.');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -138,20 +170,20 @@ const Register: React.FC = () => {
       <div className="max-w-md w-full p-6 bg-white rounded-lg shadow-lg">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-gray-800">Create an Account</h2>
-          <p className="text-gray-600 mt-1">Sign up to get started</p>
+          <p className="text-gray-600 mt-1">Join us and start exploring</p>
         </div>
         
-        {(error || formError) && (
+        {formError && (
           <div className="flex items-center bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
             <AlertCircle size={18} className="mr-2" />
-            <span>{formError || error}</span>
+            <span>{formError}</span>
           </div>
         )}
         
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Username field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="username">Username</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="username">Username *</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <User size={18} className="text-gray-400" />
@@ -165,14 +197,14 @@ const Register: React.FC = () => {
                 className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Choose a username"
                 required
-                disabled={loading}
+                disabled={isLoading}
               />
             </div>
           </div>
           
           {/* Email field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="email">Email *</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Mail size={18} className="text-gray-400" />
@@ -186,7 +218,7 @@ const Register: React.FC = () => {
                 className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Your email address"
                 required
-                disabled={loading}
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -203,7 +235,7 @@ const Register: React.FC = () => {
                 onChange={handleChange}
                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="First name"
-                disabled={loading}
+                disabled={isLoading}
               />
             </div>
             
@@ -217,14 +249,14 @@ const Register: React.FC = () => {
                 onChange={handleChange}
                 className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Last name"
-                disabled={loading}
+                disabled={isLoading}
               />
             </div>
           </div>
           
           {/* Password field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password">Password *</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Lock size={18} className="text-gray-400" />
@@ -236,9 +268,9 @@ const Register: React.FC = () => {
                 value={formData.password}
                 onChange={handleChange}
                 className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Create a password"
+                placeholder="Create a strong password"
                 required
-                disabled={loading}
+                disabled={isLoading}
               />
               <button
                 type="button"
@@ -285,7 +317,7 @@ const Register: React.FC = () => {
           
           {/* Confirm Password field */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password_confirm">Confirm Password</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1" htmlFor="password_confirm">Confirm Password *</label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Lock size={18} className="text-gray-400" />
@@ -299,7 +331,7 @@ const Register: React.FC = () => {
                 className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Confirm your password"
                 required
-                disabled={loading}
+                disabled={isLoading}
               />
               <button
                 type="button"
@@ -332,9 +364,9 @@ const Register: React.FC = () => {
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center justify-center"
-            disabled={loading}
+            disabled={isLoading}
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <Loader size={18} className="animate-spin mr-2" />
                 Creating Account...

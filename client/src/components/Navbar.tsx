@@ -1,4 +1,4 @@
-// components/Navbar.tsx - Updated to use Lucide React icons from icon_name
+// Updated Navbar.tsx with corrected login path
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { getCurrentUser, logout, isAuthenticated } from '../services/auth';
@@ -48,7 +48,6 @@ const getIconByName = (iconName: string | undefined, size = 18) => {
 
 const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  // Remove unused isAdminUser state
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isProductsMenuOpen, setIsProductsMenuOpen] = useState(false);
@@ -72,9 +71,6 @@ const Navbar = () => {
   const checkAuthStatus = () => {
     const authenticated = isAuthenticated();
     setIsLoggedIn(authenticated);
-    
-    // Only check admin status if we need to use it
-    // const isAdminUser = isAdmin();
     
     if (authenticated) {
       const userData = getCurrentUser();

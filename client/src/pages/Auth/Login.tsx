@@ -1,49 +1,83 @@
-// src/pages/Auth/Login.tsx
+// client/src/pages/Auth/Login.tsx - Consolidated Login Page
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import { Eye, EyeOff, Loader, Lock, User, AlertCircle, Mail } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { login } from '../../services/auth';
+import { Eye, EyeOff, Loader, Lock, User, AlertCircle } from 'lucide-react';
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { login, isAuthenticated, user, error, loading, clearError } = useAuth();
   const [formData, setFormData] = useState({
     username: '',
     password: '',
   });
+  const [error, setError] = useState<string>('');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   const [showPassword, setShowPassword] = useState<boolean>(false);
 
-  // Get redirect path from location state or default to dashboard
-  const from = location.state?.from?.pathname || '/';
-
-  // Redirect if already authenticated
+  // When login component mounts, clear any existing session flag
   useEffect(() => {
-    if (isAuthenticated && user) {
-      // Redirect admin users to admin dashboard
-      if (user.is_staff) {
-        navigate('/auth/dashboard');
-      } else {
-        // Redirect regular users to user dashboard or home
-        navigate('/user/dashboard');
-      }
-    }
-  }, [isAuthenticated, user, navigate]);
+    sessionStorage.removeItem('sessionAuth');
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // Clear error when user starts typing again
-    if (error) clearError();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
+    setIsLoading(true);
+
     try {
-      await login(formData.username, formData.password);
-    } catch (err) {
-      // Error is handled in the auth context
-      console.error('Login submission error:', err);
+      console.log('Attempting login with:', { username: formData.username });
+      // Use the login function from auth service
+      const data = await login(formData);
+      
+      console.log('Login response received:', { hasToken: !!data.token, hasUser: !!data.user });
+      
+      // Check if user is admin before allowing access to dashboard
+      if (data.user && data.user.is_staff) {
+        console.log('Login successful - redirecting to dashboard');
+        sessionStorage.setItem('sessionAuth', 'true');
+        navigate('/auth/dashboard');
+      } else if (data.user) {
+        // Redirect regular users to a different page (e.g., user dashboard or home)
+        console.log('Login successful - redirecting regular user');
+        sessionStorage.setItem('sessionAuth', 'true');
+        navigate('/user/dashboard');
+      } else {
+        setError('Invalid user data received.');
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      
+      // Handle different error scenarios
+      if (error.message && error.message.includes('Authentication failed')) {
+        setError('Invalid username or password');
+      } else if (error.response) {
+        // Server responded with an error
+        if (error.response.status === 401) {
+          setError('Invalid username or password');
+        } else if (error.response.data && error.response.data.detail) {
+          setError(error.response.data.detail);
+        } else if (error.response.data && error.response.data.error) {
+          setError(error.response.data.error);
+        } else {
+          setError('Authentication failed. Please try again.');
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        setError('Server not responding. Please check your connection.');
+      } else {
+        // Something else happened
+        setError('Login failed: ' + (error.message || 'Please try again later.'));
+      }
+      
+      // Clear session auth flag on any error
+      sessionStorage.removeItem('sessionAuth');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -82,7 +116,7 @@ const Login: React.FC = () => {
                 className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your username"
                 required
-                disabled={loading}
+                disabled={isLoading}
               />
             </div>
           </div>
@@ -102,7 +136,7 @@ const Login: React.FC = () => {
                 className="pl-10 w-full p-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="Enter your password"
                 required
-                disabled={loading}
+                disabled={isLoading}
               />
               <button
                 type="button"
@@ -137,9 +171,9 @@ const Login: React.FC = () => {
           <button
             type="submit"
             className="w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center justify-center"
-            disabled={loading}
+            disabled={isLoading}
           >
-            {loading ? (
+            {isLoading ? (
               <>
                 <Loader size={18} className="animate-spin mr-2" />
                 Signing in...
