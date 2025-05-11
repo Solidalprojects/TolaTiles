@@ -35,7 +35,7 @@ logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])  # Make sure this is properly imported from rest_framework.permissions
+@permission_classes([AllowAny])  # This is the critical part - we need to allow anyone to register
 def register_view(request):
     """
     Register a new user without requiring authentication
@@ -57,7 +57,6 @@ def register_view(request):
             'user': user_serializer.data
         }
         
-        logger.info(f"New user registered: {user.username}")
         return Response(response_data, status=status.HTTP_201_CREATED)
     
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

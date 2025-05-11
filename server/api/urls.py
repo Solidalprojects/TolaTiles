@@ -5,7 +5,7 @@
 from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
 from . import views
-from .views_auth import admin_login
+from .views_auth import register_user, admin_login
 
 router = DefaultRouter()
 router.register(r'categories', views.TileCategoryViewSet)

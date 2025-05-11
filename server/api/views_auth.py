@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
-from .serializers import UserSerializer
+from .serializers import UserSerializer, RegisterSerializer
 import logging
 
 # Set up logger
@@ -68,3 +68,42 @@ def admin_login(request):
             {'error': 'Invalid credentials'}, 
             status=status.HTTP_401_UNAUTHORIZED
         )
+        
+        
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def register_user(request):
+    """
+    Register a new user without requiring authentication
+    """
+    logger.info("Registration attempt")
+    
+    serializer = RegisterSerializer(data=request.data)
+    
+    if serializer.is_valid():
+        # Create user
+        user = serializer.save()
+        
+        # Create token for the new user
+        token, _ = Token.objects.get_or_create(user=user)
+        
+        # Return user info and token
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
+            'is_staff': user.is_staff
+        }
+        
+        response_data = {
+            'token': token.key,
+            'user': user_data
+        }
+        
+        logger.info(f"New user registered: {user.username}")
+        return Response(response_data, status=status.HTTP_201_CREATED)
+    
+    logger.warning(f"Registration failed: {serializer.errors}")
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

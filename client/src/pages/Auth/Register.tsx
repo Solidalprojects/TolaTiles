@@ -100,76 +100,87 @@ const Register: React.FC = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  // Validate form
+  if (formData.password !== formData.password_confirm) {
+    setFormError('Passwords do not match');
+    return;
+  }
+  
+  if (passwordStrength < 75) {
+    setFormError('Password is not strong enough');
+    return;
+  }
+  
+  try {
+    setIsLoading(true);
+    setFormError(null);
     
-    // Validate form
-    if (formData.password !== formData.password_confirm) {
-      setFormError('Passwords do not match');
-      return;
-    }
-    
-    if (passwordStrength < 75) {
-      setFormError('Password is not strong enough');
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      setFormError(null);
-      
-      // Directly call the API using axios instead of using apiClient
-      // This bypasses any potential auth header issues
-      const response = await axios.post(API_ENDPOINTS.AUTH.REGISTER, {
+    // Use fetch API for direct control
+    const response = await fetch(API_ENDPOINTS.AUTH.REGISTER, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({
         username: formData.username,
         email: formData.email,
         password: formData.password,
         password_confirm: formData.password_confirm,
         first_name: formData.first_name || '',
         last_name: formData.last_name || ''
-      });
-      
-      console.log('Registration successful:', response.data);
-      
-      // If we received a token, store it and redirect to login
-      if (response.data && response.data.token) {
-        // Redirect to login page with success message
-        navigate('/auth/login', { 
-          state: { 
-            message: 'Registration successful! Please log in.',
-            username: formData.username 
-          } 
-        });
-      } else {
-        navigate('/auth/login');
-      }
-    } catch (error: any) {
-      console.error('Registration error:', error);
-      
-      // Enhanced error handling
-      if (error.response && error.response.data) {
-        // Handle validation errors from API
-        if (error.response.data.username) {
-          setFormError(`Username error: ${error.response.data.username}`);
-        } else if (error.response.data.email) {
-          setFormError(`Email error: ${error.response.data.email}`);
-        } else if (error.response.data.password) {
-          setFormError(`Password error: ${error.response.data.password}`);
-        } else if (error.response.data.detail) {
-          setFormError(error.response.data.detail);
-        } else if (error.response.data.error) {
-          setFormError(error.response.data.error);
-        } else {
-          setFormError('Registration failed. Please check your information and try again.');
-        }
-      } else if (error.message) {
-        setFormError(error.message);
-      } else {
-        setFormError('An error occurred during registration. Please try again later.');
-      }
-    } finally {
-      setIsLoading(false);
+      })
+    });
+    
+    // Parse the response
+    const data = await response.json();
+    
+    if (!response.ok) {
+      // Handle API error responses
+      throw { response: { data, status: response.status } };
     }
-  };
+    
+    console.log('Registration successful:', data);
+    
+    // Redirect to login with success message
+    navigate('/auth/login', { 
+      state: { 
+        message: 'Registration successful! Please log in.',
+        username: formData.username 
+      } 
+    });
+  } catch (error: any) {
+    console.error('Registration error:', error);
+    
+    // Extract error from response if available
+    const responseData = error.response?.data;
+    
+    if (responseData) {
+      // Process specific field errors
+      if (responseData.username) {
+        setFormError(`Username error: ${responseData.username}`);
+      } else if (responseData.email) {
+        setFormError(`Email error: ${responseData.email}`);
+      } else if (responseData.password) {
+        setFormError(`Password error: ${responseData.password}`);
+      } else if (responseData.detail) {
+        setFormError(responseData.detail);
+      } else if (responseData.error) {
+        setFormError(responseData.error);
+      } else {
+        setFormError('Registration failed. Please check your information and try again.');
+      }
+    } else if (error.message) {
+      setFormError(error.message);
+    } else {
+      setFormError('An error occurred during registration. Please try again later.');
+    }
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
