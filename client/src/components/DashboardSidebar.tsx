@@ -64,12 +64,12 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
     }
   ];
 
-  // Desktop sidebar
+  // Desktop sidebar - Updated with black theme
   const DesktopSidebar = () => (
-    <div className="hidden md:flex md:flex-col w-64 bg-gradient-to-b from-blue-900 to-blue-800 text-white h-screen fixed">
-      <div className="p-6 border-b border-blue-800">
-        <h2 className="text-xl font-bold">Tiles Admin</h2>
-        <p className="text-blue-300 text-sm mt-1">Welcome, {userName}</p>
+    <div className="hidden md:flex md:flex-col w-64 bg-gradient-to-b from-black to-gray-900 text-white h-screen fixed">
+      <div className="p-6 border-b border-gray-800">
+        <h2 className="text-xl font-bold">Admin Dashboard</h2>
+        <p className="text-gray-300 text-sm mt-1">Welcome, {userName}</p>
       </div>
       
       <nav className="flex-grow py-6">
@@ -79,8 +79,8 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
               key={item.id}
               className={`flex items-center px-6 py-3 cursor-pointer transition-colors ${
                 activeTab === item.id 
-                  ? 'bg-blue-700 text-white font-medium' 
-                  : 'text-blue-200 hover:bg-blue-800 hover:text-white'
+                  ? 'bg-gray-800 text-white font-medium' 
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
               }`}
               onClick={() => setActiveTab(item.id)}
             >
@@ -91,7 +91,7 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
         </ul>
       </nav>
       
-      <div className="p-6 border-t border-blue-800">
+      <div className="p-6 border-t border-gray-800">
         <button 
           onClick={handleLogout} 
           className="flex items-center justify-center w-full py-2 px-4 bg-red-600 hover:bg-red-700 rounded transition-colors text-white"
@@ -105,8 +105,8 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
 
   // Mobile sidebar header
   const MobileSidebarHeader = () => (
-    <div className="md:hidden flex justify-between items-center bg-blue-900 p-4 text-white">
-      <h2 className="text-lg font-bold">Tiles Admin</h2>
+    <div className="md:hidden flex justify-between items-center bg-black p-4 text-white">
+      <h2 className="text-lg font-bold">Admin Dashboard</h2>
       <button 
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         className="focus:outline-none"
@@ -120,12 +120,12 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
     </div>
   );
 
-  // Mobile sidebar menu
+  // Mobile sidebar menu - Updated with black theme
   const MobileSidebarMenu = () => (
     isMobileMenuOpen && (
-      <div className="md:hidden bg-blue-800 shadow-lg text-white">
-        <div className="px-4 py-2 border-b border-blue-700">
-          <p className="text-blue-300 text-sm">Welcome, {userName}</p>
+      <div className="md:hidden bg-gray-900 shadow-lg text-white">
+        <div className="px-4 py-2 border-b border-gray-800">
+          <p className="text-gray-300 text-sm">Welcome, {userName}</p>
         </div>
         <nav className="py-2">
           <ul>
@@ -134,8 +134,8 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
                 key={item.id}
                 className={`flex items-center px-4 py-3 cursor-pointer transition-colors ${
                   activeTab === item.id 
-                    ? 'bg-blue-700 text-white font-medium' 
-                    : 'text-blue-200 hover:bg-blue-700 hover:text-white'
+                    ? 'bg-gray-800 text-white font-medium' 
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
                 }`}
                 onClick={() => {
                   setActiveTab(item.id);
@@ -148,7 +148,7 @@ const DashboardSidebar = ({ activeTab, setActiveTab }: DashboardSidebarProps) =>
             ))}
           </ul>
         </nav>
-        <div className="p-4 border-t border-blue-700">
+        <div className="p-4 border-t border-gray-800">
           <button 
             onClick={handleLogout} 
             className="flex items-center justify-center w-full py-2 px-4 bg-red-600 hover:bg-red-700 rounded transition-colors text-white"

@@ -8,6 +8,7 @@ import {
   Users, MessageSquare, Mail, Phone, ChevronRight, 
   Star, ArrowLeft, ArrowRight
 } from 'lucide-react';
+import tolalogo from '../assets/abouttola.jpg'
 
 const About = () => {
   // State for team members and testimonials
@@ -219,7 +220,7 @@ const About = () => {
             <div className="mt-10 lg:mt-0">
               <div className="aspect-w-4 aspect-h-3 rounded-lg overflow-hidden shadow-lg">
                 <img 
-                  src="/images/about-hero.jpg" 
+                  src={tolalogo} 
                   alt="Tola Tiles Office" 
                   className="w-full h-full object-cover"
                   onError={(e) => {

@@ -1,4 +1,4 @@
-// Updated App.tsx with Register route
+// client/src/App.tsx with updated Dashboard route
 import { BrowserRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
 import { useState, useEffect, JSX } from 'react';
 import Navbar from './components/Navbar';
@@ -6,7 +6,7 @@ import Footer from './components/Footer';
 import Home from './pages/home';
 import Dashboard from './components/Dashboard';
 import Login from './pages/Auth/Login'; 
-import Register from './pages/Auth/Register'; // Import the Register component
+import Register from './pages/Auth/Register';
 import TileDetail from './pages/TileDetail';
 import ProjectDetail from './pages/ProjectDetail';
 import About from './pages/About';
@@ -218,7 +218,7 @@ function App() {
             }
           />
           
-          {/* Auth register route - Added this route */}
+          {/* Auth register route */}
           <Route
             path="/auth/register"
             element={
@@ -234,18 +234,12 @@ function App() {
             }
           />
           
-          {/* Protected routes */}
+          {/* Protected dashboard route - Updated to use Dashboard without wrapping Navbar/Footer */}
           <Route
             path="/auth/dashboard"
             element={
               <ProtectedRoute>
-                <>
-                  <Navbar />
-                  <main className="min-h-screen bg-gray-50">
-                    <Dashboard />
-                  </main>
-                  <Footer />
-                </>
+                <Dashboard />
               </ProtectedRoute>
             }
           />

@@ -5,6 +5,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentUser, isAuthenticated } from '../services/auth';
 import DashboardSidebar from './DashboardSidebar';
+import DashboardNavbar from './DashboardNavbar';
 import TileManager from './TileManager';
 import CategoryManager from './CategoryManager';
 import ProjectManager from './ProjectManager';
@@ -108,23 +109,28 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row bg-gray-100 min-h-screen">
-      <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+    <div className="flex flex-col min-h-screen">
+      {/* Use the custom DashboardNavbar instead of regular Navbar */}
+      <DashboardNavbar />
       
-      {/* Main content area with responsive padding */}
-      <div className="flex-1 md:ml-64">
-        {/* Dashboard header */}
-        <div className="bg-white shadow-sm">
-          <div className="px-4 sm:px-6 lg:px-8 py-4">
-            <h1 className="text-2xl font-semibold text-gray-800">{getActiveComponentTitle()}</h1>
-            <p className="text-sm text-gray-500">Manage your tile construction resources</p>
-          </div>
-        </div>
+      <div className="flex flex-col md:flex-row flex-1 bg-gray-100">
+        <DashboardSidebar activeTab={activeTab} setActiveTab={setActiveTab} />
         
-        {/* Dashboard content */}
-        <div className="px-4 sm:px-6 lg:px-8 py-6">
-          <div className="bg-white rounded-lg shadow">
-            {renderActiveComponent()}
+        {/* Main content area with responsive padding */}
+        <div className="flex-1 md:ml-64">
+          {/* Dashboard header */}
+          <div className="bg-white shadow-sm">
+            <div className="px-4 sm:px-6 lg:px-8 py-4">
+              <h1 className="text-2xl font-semibold text-gray-800">{getActiveComponentTitle()}</h1>
+              <p className="text-sm text-gray-500">Manage your tile construction resources</p>
+            </div>
+          </div>
+          
+          {/* Dashboard content */}
+          <div className="px-4 sm:px-6 lg:px-8 py-6">
+            <div className="bg-white rounded-lg shadow">
+              {renderActiveComponent()}
+            </div>
           </div>
         </div>
       </div>
