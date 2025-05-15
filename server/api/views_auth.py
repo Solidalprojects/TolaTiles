@@ -43,17 +43,13 @@ def admin_login(request):
         # Get or create token
         token, created = Token.objects.get_or_create(user=user)
         
+        # Serialize user data
+        user_serializer = UserSerializer(user, context={'request': request})
+        
         # Return user data and token
         return Response({
             'token': token.key,
-            'user': {
-                'id': user.id,
-                'username': user.username,
-                'email': user.email,
-                'first_name': user.first_name,
-                'last_name': user.last_name,
-                'is_staff': user.is_staff
-            }
+            'user': user_serializer.data
         })
     else:
         # Improved error handling
@@ -87,19 +83,13 @@ def register_user(request):
         # Create token for the new user
         token, _ = Token.objects.get_or_create(user=user)
         
-        # Return user info and token
-        user_data = {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'is_staff': user.is_staff
-        }
+        # Serialize user data
+        user_serializer = UserSerializer(user, context={'request': request})
         
+        # Return user info and token
         response_data = {
             'token': token.key,
-            'user': user_data
+            'user': user_serializer.data
         }
         
         logger.info(f"New user registered: {user.username}")

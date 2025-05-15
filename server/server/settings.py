@@ -52,6 +52,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'api.middleware.CrossDomainAuthMiddleware',  # Add this line
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -66,6 +67,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:3000",
     "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174",
 ]
 
 CORS_ALLOW_METHODS = [
@@ -80,7 +82,7 @@ CORS_ALLOW_METHODS = [
 CORS_ALLOW_HEADERS = [
     "accept",
     "accept-encoding",
-    "authorization",
+    "authorization",  # Make sure this is included
     "content-type",
     "dnt",
     "origin",
@@ -104,6 +106,10 @@ TEMPLATES = [
         },
     },
 ]
+
+SESSION_COOKIE_AGE = 1209600  # 2 weeks in seconds
+SESSION_COOKIE_SECURE = False  # Set to True in production with HTTPS
+SESSION_COOKIE_HTTPONLY = True
 
 WSGI_APPLICATION = 'server.wsgi.application'
 
