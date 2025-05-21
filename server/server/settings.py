@@ -95,9 +95,9 @@ CORS_ALLOW_HEADERS = [
 ALLOWED_HOSTS = [
     '44.207.114.211',
     'tolatiles.com',
-     # Add solidal django backend
+    'solidal.onrender.com',
     'localhost',
-    '127.0.0.1'
+    '127.0.0.1',
 ]
 
 TEMPLATES = [
