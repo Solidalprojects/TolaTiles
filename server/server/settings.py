@@ -26,10 +26,6 @@ SECRET_KEY = 'django-insecure-hnhkq-qltrj6ibcu!@r6n_2*l5l7ctt55u4bgnzj89p3g0)60$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    '44.207.114.211',
-    'tolatiles.com'
-]
 
 
 # Application definition
@@ -68,8 +64,10 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3001",
     "http://localhost:5173",
-    "http://tolatiles.com"
-    "https://solidal.onrender.com"
+    "http://127.0.0.1:5173",
+    "https://solidal.onrender.com",  # Add your frontend domain
+    "http://tolatiles.com",
+    "https://tolatiles.com"
 ]
 
 CORS_ALLOW_METHODS = [
@@ -84,13 +82,22 @@ CORS_ALLOW_METHODS = [
 CORS_ALLOW_HEADERS = [
     "accept",
     "accept-encoding",
-    "authorization",  # Make sure this is included
+    "authorization",
     "content-type",
     "dnt",
     "origin",
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+]
+
+# Add your frontend domain to ALLOWED_HOSTS
+ALLOWED_HOSTS = [
+    '44.207.114.211',
+    'tolatiles.com',
+     # Add solidal django backend
+    'localhost',
+    '127.0.0.1'
 ]
 
 TEMPLATES = [

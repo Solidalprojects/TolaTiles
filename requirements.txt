@@ -12,6 +12,8 @@ whitenoise>=6.5.0
 # Image processing (for ImageField)
 Pillow>=10.0.0
 
+# HTTP requests
+requests>=2.31.0
 # Database adaptors (uncomment as needed)
 # psycopg2-binary>=2.9.6  # PostgreSQL
 # mysqlclient>=2.1.1  # MySQL

@@ -6,7 +6,7 @@ from django.urls import path, include, re_path
 from rest_framework.routers import DefaultRouter
 from . import views
 from .views_auth import register_user, admin_login
-
+from .views_proxy import proxy_client_login 
 router = DefaultRouter()
 router.register(r'categories', views.TileCategoryViewSet)
 router.register(r'tiles', views.TileViewSet)
@@ -32,6 +32,7 @@ urlpatterns = [
     path('auth/user/', views.get_user_info, name='user_info'),
     path('auth/change-password/', views.change_password, name='change_password'),
     
+    path('auth/client-login-proxy/', proxy_client_login, name='client_login_proxy'),
     # User profile endpoints
     path('auth/profile/', views.update_user_profile, name='update_profile'),
     
