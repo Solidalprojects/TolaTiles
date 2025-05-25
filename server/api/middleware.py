@@ -2,8 +2,37 @@
 from django.utils.deprecation import MiddlewareMixin
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import login
+from django.http import JsonResponse
 from django.contrib.auth.models import User
+from django.conf import settings
+import logging
 
+logger = logging.getLogger(__name__)
+
+class FileUploadMiddleware(MiddlewareMixin):
+    
+    def process_request(self, request):
+        if request.method == 'POST' and request.content_type and 'multipart/form-data' in request.content_type:
+            logger.info(f"File upload request to {request.path}")
+            logger.info(f"Content Length: {request.META.get('CONTENT_LENGTH', 'Unknow')}")
+            
+            #Check content length
+            content_length = request.META.get('CONTENT_LENGTH')
+            if content_length:
+                content_length = int(content_length)
+                max_size = getattr(settings, 'DATA_UPLOAD_MAX_MEMORY_SIZE', 50 * 1024 * 1024)
+                
+                if content_length > max_size:
+                    return JsonResponse({
+                        'error': f'File too large. Maximum allowed is {max_size // (1024 * 1024)}MB',
+                        'max_size-mb': max_size // (1024*1024),
+                        'received_size_mb' : content_length // (1024*1024)
+                    }, status=413)
+        return None
+    
+    
+    
+    
 class CrossDomainAuthMiddleware(MiddlewareMixin):
     """
     Middleware that checks for token in Authorization header

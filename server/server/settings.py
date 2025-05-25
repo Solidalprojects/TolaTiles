@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
 from pathlib import Path
 from datetime import timedelta
 
@@ -26,6 +26,11 @@ SECRET_KEY = 'django-insecure-hnhkq-qltrj6ibcu!@r6n_2*l5l7ctt55u4bgnzj89p3g0)60$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
+FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024
+DATA_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024 
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
+
+MAX_UPLOAD_SIZE = 50 * 1024 * 1024
 
 
 # Application definition
@@ -51,7 +56,8 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'api.middleware.CrossDomainAuthMiddleware',  # Add this line
+    'api.middleware.CrossDomainAuthMiddleware',  
+    'api.middleware.FileUploadMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -161,6 +167,11 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+]
+
+FILE_UPLOAD_HANDLERS = [
+    'django.core.files.uploadhandler.MemoryFileUploadHandler',
+    'django.core.files.uploadhandler.TemporaryFileUploadHandler',
 ]
 
 
